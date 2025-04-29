@@ -6,12 +6,8 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.constants import codata2010 as cst
 
-from config.settings import SPECTRUM_DIR
-
-
-flux_unit = u.erg / (u.cm ** 2 * u.s)
-
-cst_hc = cst.h * cst.c
+from config.settings import SPECTRUM_DIR, PICS_DIR
+from config.units import flux_unit, cst_hc
 
 dist = 6.6 * u.kpc  # [GAIA-2018]
 area = 4 * np.pi * dist ** 2
@@ -329,9 +325,8 @@ def test_full_spectrum():
     plt.legend(ncol=3)
 
     plt.tight_layout()
-    # plt.savefig("spectrum.png", dpi=600)
-    # plt.savefig("spectrum.pdf")
-    plt.show()
+    plt.savefig(os.path.join(PICS_DIR, "spectrum.png"), dpi=600)
+    plt.savefig(os.path.join(PICS_DIR, "spectrum.pdf"))
     plt.show()
     return
 
