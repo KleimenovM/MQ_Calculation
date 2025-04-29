@@ -11,12 +11,13 @@ import astropy.units as u
 from astropy.constants import codata2018 as cst
 
 from config.settings import ISRF_DIR
+from config.units import Franklin
 from src.ebl_photon_density import CMBOnly
+from src.klein_nishina import klein_nishina_on_a_given_photon_density_profile
 
 
 def get_total_density():
-
-    path = os.path.join(ISRF_DIR, '/GalacticExtinction/local_density.pck')
+    path = os.path.join(ISRF_DIR, 'local_density.pck')
     with open(path, 'rb') as f:
         e_bg, e_d_bg = pickle.load(f)
         e_bg = np.flip(e_bg)
@@ -28,7 +29,7 @@ def get_total_density():
     return e_bg, d_bg1 + d_bg2
 
 
-def inverse_compton_time(energy, mass):
+def inverse_compton_timescale(energy, mass):
     e, d = get_total_density()
     lg_e1_min, lg_e1_max = 5, 19
     lg_e1 = np.linspace(lg_e1_min, lg_e1_max, 10000)

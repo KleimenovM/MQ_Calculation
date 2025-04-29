@@ -1,5 +1,10 @@
 import numpy as np
 
+from scipy.integrate import trapezoid
+
+from astropy.constants import codata2010 as cst
+
+from config.constants import T_CMB
 from src.black_body_radiation import bbr_density
 
 
@@ -19,7 +24,7 @@ def get_thomson_scattered_photons(g1, e1, e2=None):
     e12, e21 = np.meshgrid(e1, e2, indexing='ij')
     x1 = e12 / (4 * g1 ** 2 * e21)
     f1 = thomson_regime_profile_function(x1)
-    n_CMB = bbr_density(e21, t_cmb)
-    result = 3 * const.sigma_T * const.c / (4 * g1 ** 2) * trapezoid(n_CMB * f1, np.log10(e21.value), axis=1)
+    n_CMB = bbr_density(e21, T_CMB)
+    result = 3 * cst.sigma_T * cst.c / (4 * g1 ** 2) * trapezoid(n_CMB * f1, np.log10(e21.value), axis=1)
     norm = trapezoid(result, e1, axis=0)
     return result / norm
