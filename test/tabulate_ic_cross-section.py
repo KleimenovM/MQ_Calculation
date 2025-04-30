@@ -12,6 +12,7 @@ from astropy.constants import codata2010 as cst
 
 from config.settings import ELECTRONS_DIR
 from src.ebl_photon_density import CMBOnly
+from src.electron_spectrum_parametrization import ElectronSpectrumParametrization
 from src.klein_nishina import klein_nishina_on_a_given_photon_density_profile
 
 
@@ -75,16 +76,30 @@ def tabulate_the_spectrum():
     pickle.dump([electron_energy, photon_energy, result],
                 open(os.path.join(ELECTRONS_DIR, "spectrum_tabulated.pck"), "wb"))
 
-    # test matrix
-    """xx, yy = np.meshgrid(electron_energy.value, photon_energy.value, indexing='ij')
-    plt.pcolormesh(xx, yy, np.log10(result.value + np.finfo(float).tiny), vmin=-32)
+    return
+
+
+def load_tabulated_matrix():
+    data = pickle.load(open(os.path.join(ELECTRONS_DIR, "spectrum_tabulated.pck"), 'rb'))
+    return data[0], data[1], data[2]
+
+
+def test_tabulated_matrix():
+    electron_energy, photon_energy, result = load_tabulated_matrix()
+
+    xx, yy = np.meshgrid(electron_energy.value, photon_energy.value, indexing='ij')
+    plt.pcolormesh(xx, yy, np.log10(result.value + np.finfo(float).tiny), vmin=-36)
     plt.colorbar()
     plt.xscale('log')
     plt.yscale('log')
-    plt.show()"""
+    plt.show()
+    return
 
-    # Test spectrum
-    """spec = ElectronSpectrumParametrization(n0=1.0 / (u.eV * u.cm ** 3), e0=1e12 * u.eV,
+
+def test_tabulated_spectrum():
+    electron_energy, photon_energy, result = load_tabulated_matrix()
+
+    spec = ElectronSpectrumParametrization(n0=1.0 / (u.eV * u.cm ** 3), e0=1e12 * u.eV,
                                            eta0=0.0, p0=2, k10=0.0, k20=3.0)
 
     e_phot_values, corrected_fluxes_values, corrected_errors_values = get_energies_and_fluxes("spectrum_UHE.pck",
@@ -97,15 +112,10 @@ def tabulate_the_spectrum():
     plt.loglog(photon_energy, 0.2 * photon_energy**2 * photon_spectrum * value)
     plt.xlim(1e8, 1e16)
     plt.ylim(1e-14, 1e-10)
-    plt.show()"""
-
-    return
-
-
-def save_tabulated_spectrum():
+    plt.show()
     return
 
 
 if __name__ == '__main__':
-    tabulate_the_spectrum()
-    # save_tabulated_spectrum()
+    # tabulate_the_spectrum()
+    test_tabulated_matrix()

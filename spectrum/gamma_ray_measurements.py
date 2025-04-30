@@ -7,7 +7,7 @@ import astropy.units as u
 
 from config.settings import SPECTRUM_DIR, PICS_DIR
 from config.units import flux_unit
-from config.plotting import set_plotting_defaults
+from config.plotting import set_plotting_defaults, save_figure
 
 dist = 6.6 * u.kpc  # [GAIA-2018]
 area = 4 * np.pi * dist ** 2
@@ -69,9 +69,9 @@ def FERMI_Zhao():
                   [30831.528479163662, 95268.12507961658],
                   [96962.22330955854, 300932.3416927414]]) * u.MeV.to(u.eV)
 
-    real_x = 10 ** (np.mean(np.log10(x), axis=1))
-    x_err_right = x[:, 1] - real_x
-    x_err_left = real_x - x[:, 0]
+    real_x = 10 ** (np.mean(np.log10(x), axis=1)) * u.eV
+    x_err_right = x[:, 1] * u.eV - real_x
+    x_err_left = real_x - x[:, 0] * u.eV
 
     y = np.array([[1.6665488096621727e-13, 1.6116569239501234e-13],
                   [1.4946704426036537e-13, 1.5585736598315709e-13],
@@ -83,17 +83,31 @@ def FERMI_Zhao():
     return real_x, real_y, 0.5 * real_y, .0 * np.ones_like(real_y), x_err_left, x_err_right
 
 
+def gamma_ray_data():
+    names = ["HAWC, 2024", "LHAASO, 2024", "H.E.S.S., 2024", "FERMI, 2024", "FERMI, 2025"]
+    functions = [HAWC, LHAASO, HESS, FERMI_Neronov, FERMI_Zhao]
+    e, flux, f_l, f_p, e_l, e_p = [], [], [], [], [], []
+    for i in range(len(names)):
+        e_i, flux_i, f_l_i, f_p_i, e_l_i, e_p_i = functions[i]()
+        e.append(e_i)
+        flux.append(flux_i)
+        f_l.append(f_l_i)
+        f_p.append(f_p_i)
+        e_l.append(e_l_i)
+        e_p.append(e_p_i)
+    return names, e, flux, f_l, f_p, e_l, e_p
+
+
 def gamma_ray_measurements():
     names = ["HAWC, 2024", "LHAASO, 2024", "H.E.S.S., 2024", "FERMI, 2024", "FERMI, 2025"]
     functions = [HAWC, LHAASO, HESS, FERMI_Neronov, FERMI_Zhao]
     for i in range(len(names)):
-        print(i)
         e, flux, f_l, f_p, e_l, e_p = functions[i]()
         plt.errorbar(e, flux, xerr=[e_l, e_p], yerr=[f_l, f_p], linestyle='None', label=names[i], fmt='.', uplims=f_p <= 0)
     return
 
 
-if __name__ == '__main__':
+def plot_gamma_ray_measurements():
     set_plotting_defaults()
     gamma_ray_measurements()
     plt.xlabel("Energy [eV]")
@@ -102,5 +116,10 @@ if __name__ == '__main__':
     plt.yscale('log')
     plt.legend()
     plt.tight_layout()
-    # plt.savefig(os.path.join(PICS_DIR, "gamma_ray_measurements.pdf"))
+    # save_figure("gamma_ray_measurements")
     plt.show()
+    return
+
+
+if __name__ == '__main__':
+    plot_gamma_ray_measurements()
