@@ -9,10 +9,10 @@ from astropy.constants import codata2010 as cst
 from config.settings import SPECTRUM_DIR, PICS_DIR
 from config.units import flux_unit
 
-from spectrum.radio_measurements import radio_measurements
-from spectrum.x_ray_measurements import x_ray_measurements
-from spectrum.optical_measurements import optical_measurements
-from spectrum.gamma_ray_measurements import gamma_ray_measurements
+from spectrum.measurements_radio import radio_measurements
+from spectrum.measurements_xray import x_ray_measurements
+from spectrum.measurements_optical import optical_measurements
+from spectrum.measurements_gamma import gamma_ray_measurements
 
 dist = 6.6 * u.kpc  # [GAIA-2018]
 area = 4 * np.pi * dist ** 2

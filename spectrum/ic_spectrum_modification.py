@@ -8,7 +8,7 @@ import astropy.units as u
 
 from config.settings import ISRF_DIR, SPECTRUM_DIR
 from config.units import flux_unit
-from spectrum.gamma_ray_measurements import gamma_ray_data
+from spectrum.measurements_gamma import gamma_ray_data
 from src.cross_section import total_cross_section
 from src.ebl_photon_density import CMBOnly
 
