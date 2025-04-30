@@ -4,6 +4,9 @@ Linestyles = ['solid', 'dashed', 'dashdot', 'dotted']
 
 
 def set_plotting_defaults():
+    # default figure size
+    mpl.rcParams["figure.figsize"] = [7, 5]
+
     # Set default font size
     mpl.rcParams['font.size'] = 14
 
