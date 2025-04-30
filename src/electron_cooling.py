@@ -21,7 +21,20 @@ class Cooling:
 
     """
     def __init__(self):
+        self.magnetic_field = 0 * Gauss
+        self.min_energy = 1e9 * u.eV
+        self.max_energy = 1e22 * u.eV
         pass
+
+    def clip_energy(self, energy_value):
+        """
+        Clips the given energy value to ensure it stays within the predefined minimum
+        and maximum energy bounds.
+
+        :param energy_value: [eV], The energy value to be clipped.
+        :return: [eV], The energy value
+        """
+        return np.clip(energy_value, a_min=self.min_energy.value, a_max=self.max_energy.value)
 
     def power(self, time, energy):
         return
@@ -39,10 +52,11 @@ class SynchrotronCooling(Cooling):
     """
     def __init__(self, magnetic_field):
         super().__init__()
+
         sin2_avg = 2 / 3
         e = cst.e.gauss.value * Franklin
         sharp_units = u.eV**(-1) * u.yr**(-1)
-        self.sharp = (2 * e**4 / (3 * cst.m_e**4 * cst.c**7) * magnetic_field**2 * sin2_avg).to(sharp_units).value
+        self.sharp = (2 * e**4 / (3 * cst.m_e**4 * cst.c**7) * magnetic_field**2 * sin2_avg).to(sharp_units)
 
     def power(self, time, energy):
         """
@@ -52,7 +66,8 @@ class SynchrotronCooling(Cooling):
         :param energy: [eV] Energy value.
         :return: Synchrotron radiation power [eV/yr]
         """
-        return self.sharp * energy**2
+        energy_value = self.clip_energy(energy)
+        return self.sharp.value * energy_value**2
 
     def power_derivative(self, time, energy):
         """
@@ -62,7 +77,8 @@ class SynchrotronCooling(Cooling):
         :param energy: [eV] Energy value.
         :return: Synchrotron radiation power derivative [1/yr]
         """
-        return -2 * self.sharp * energy
+        energy_value = self.clip_energy(energy)
+        return -2 * self.sharp.value * energy_value
 
 
 class InverseComptonCooling(Cooling):
@@ -89,16 +105,6 @@ class InverseComptonCooling(Cooling):
         ic_time_f = make_splrep(np.log10(energies / u.eV), np.log10(ic_time / u.yr), k=3, s=2)
         return ic_time_f
 
-    def __clip_energy(self, energy_value):
-        """
-        Clips the given energy value to ensure it stays within the predefined minimum
-        and maximum energy bounds.
-
-        :param energy_value: [eV], The energy value to be clipped.
-        :return: [eV], The energy value
-        """
-        return np.clip(energy_value, a_min=self.min_energy.value, a_max=self.max_energy.value)
-
     def power(self, time, energy):
         """
         Inverse Compton radiation power.
@@ -107,7 +113,7 @@ class InverseComptonCooling(Cooling):
         :param energy: [eV] Energy value.
         :return: inverse comptopn radiation power [eV/yr]
         """
-        energy_value = self.__clip_energy(energy)
+        energy_value = self.clip_energy(energy)
         return energy_value / (10**self.ic_time_f(np.log10(energy_value)))
     
     def __loglog_power(self, lg_energy_value):
@@ -128,7 +134,7 @@ class InverseComptonCooling(Cooling):
         :param energy: [eV] Energy value.
         :return: Inverse Compton radiation power derivative [1/yr]
         """
-        energy_value = self.__clip_energy(energy)
+        energy_value = self.clip_energy(energy)
         lg_energy_value = np.log10(energy_value)
         power = self.power(time, energy_value)
         return -power / energy_value * derivative(self.__loglog_power, lg_energy_value).df
@@ -139,6 +145,7 @@ class JointCooling(Cooling):
         super().__init__()
         self.synch = SynchrotronCooling(magnetic_field)
         self.ic = InverseComptonCooling()
+        self.magnetic_field = magnetic_field
 
     def power(self, time, energy):
         return self.synch.power(time, energy) + self.ic.power(time, energy)
