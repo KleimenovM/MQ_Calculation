@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from config.plotting import save_figure, Tab10, set_plotting_defaults
 from config.settings import SPECTRUM_DIR
-from spectrum.gamma_ray_measurements import gamma_ray_data
+from spectrum.measurements_gamma import gamma_ray_data
 
 
 def test_ic_spectrum_modification():

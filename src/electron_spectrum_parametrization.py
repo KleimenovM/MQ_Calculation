@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class ElectronSpectrumParametrization:
+class SpectrumParametrization:
     def __init__(self, n0, e0, eta0, p0, k10, k20):
         """
         Set the four-parameter spectrum parametrization class
@@ -9,8 +9,8 @@ class ElectronSpectrumParametrization:
         :param e0: [eV], reference energy
         :param eta0: [DL], normalization factor
         :param p0: [DL] spectral index
-        :param k10: [DL], low energy limit factor
-        :param k20: [DL], upper energy limit factor
+        :param k10: [DL], low-energy limit factor
+        :param k20: [DL], high-energy limit factor
         """
         self.n0 = n0
         self.e0 = e0
