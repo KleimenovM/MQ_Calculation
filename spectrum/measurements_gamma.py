@@ -25,9 +25,9 @@ def HAWC():
 
 
 def LHAASO():
-    f_u = u.TeV / (u.cm ** 2 * u.s)
-
-    e, flux, f_p, f_l = np.loadtxt(os.path.join(SPECTRUM_DIR, "LHAASO.txt"), skiprows=1, unpack=True)
+    f_u = u.erg / (u.cm ** 2 * u.s)
+    e, flux, f_l1, f_p1 = np.loadtxt(os.path.join(SPECTRUM_DIR, "LHAASO.txt"), skiprows=1, unpack=True)
+    f_l, f_p = flux - f_l1, f_p1 - flux
 
     e = (e * u.TeV).to(u.eV)
     flux = (flux * f_u).to(flux_unit)
@@ -63,28 +63,29 @@ def FERMI_Neronov():
 
 
 def FERMI_Zhao():
-    x = np.array([[1004.4166869027495, 3089.95530556224],
-                  [3229.1695064433593, 9846.943932531487],
-                  [9760.535077688362, 30159.617148429475],
-                  [30831.528479163662, 95268.12507961658],
-                  [96962.22330955854, 300932.3416927414]]) * u.MeV.to(u.eV)
+    x = np.array([[1000, 3162.278183],
+                  [3133.169682, 9816.754421],
+                  [9816.754421, 30900.09571],
+                  [31043.30149, 97264.03827],
+                  [97714.72005, 301939.52]]) * u.MeV.to(u.eV)
 
     real_x = 10 ** (np.mean(np.log10(x), axis=1)) * u.eV
     x_err_right = x[:, 1] * u.eV - real_x
     x_err_left = real_x - x[:, 0] * u.eV
 
-    y = np.array([[1.6665488096621727e-13, 1.6116569239501234e-13],
-                  [1.4946704426036537e-13, 1.5585736598315709e-13],
-                  [5.160921161399877e-13, 4.990933524123363e-13],
-                  [5.611654314295999e-13, 5.658838112915587e-13],
-                  [1.7820053488037003e-12, 1.7524122627745403e-12]]) * flux_unit
+    y = np.array([[7.05E-13, 7.09E-13],
+               [5.97E-13, 6.01E-13],
+               [1.02E-12, 1.01E-12],
+               [1.66E-12, 1.67E-12],
+               [2.96E-12, 2.98E-12]]) * flux_unit
 
     real_y = np.mean(y, axis=1)
-    return real_x, real_y, 0.5 * real_y, .0 * np.ones_like(real_y), x_err_left, x_err_right
+    return real_x, real_y, 0.3 * real_y, .0 * np.ones_like(real_y), x_err_left, x_err_right
 
 
 def gamma_ray_data():
-    names = ["HAWC, 2024", "LHAASO, 2024", "H.E.S.S., 2024", "FERMI, 2024", "FERMI, 2025"]
+    names = ["HAWC, 2024", "LHAASO, 2024", "H.E.S.S., 2024",
+             "FERMI, [Neronov, 2024]", "FERMI, [Zhao, 2025]"]
     functions = [HAWC, LHAASO, HESS, FERMI_Neronov, FERMI_Zhao]
     e, flux, f_l, f_p, e_l, e_p = [], [], [], [], [], []
     for i in range(len(names)):
@@ -99,11 +100,13 @@ def gamma_ray_data():
 
 
 def gamma_ray_measurements():
-    names = ["HAWC, 2024", "LHAASO, 2024", "H.E.S.S., 2024", "FERMI, 2024", "FERMI, 2025"]
+    names = ["HAWC, 2024", "LHAASO, 2024", "H.E.S.S., 2024",
+             "FERMI, [Neronov, 2024]", "FERMI, [Zhao, 2025]"]
     functions = [HAWC, LHAASO, HESS, FERMI_Neronov, FERMI_Zhao]
     for i in range(len(names)):
         e, flux, f_l, f_p, e_l, e_p = functions[i]()
-        plt.errorbar(e, flux, xerr=[e_l, e_p], yerr=[f_l, f_p], linestyle='None', label=names[i], fmt='.', uplims=f_p <= 0)
+        plt.errorbar(e, flux, xerr=[e_l, e_p], yerr=[f_l, f_p], linestyle='None', label=names[i], fmt='.',
+                     uplims=f_p <= 0)
     return
 
 
@@ -112,11 +115,16 @@ def plot_gamma_ray_measurements():
     gamma_ray_measurements()
     plt.xlabel("Energy [eV]")
     plt.xscale('log')
+
+    plt.plot([1e10, 1e16], [3e-13, 3e-13])
+
     plt.ylabel("Flux [erg cm$^{-2}$ s$^{-1}$]")
     plt.yscale('log')
-    plt.legend()
+    plt.ylim(1e-13, 1e-10)
+
+    plt.legend(loc=2)
     plt.tight_layout()
-    # save_figure("gamma_ray_measurements")
+    save_figure("gamma_ray_measurements")
     plt.show()
     return
 

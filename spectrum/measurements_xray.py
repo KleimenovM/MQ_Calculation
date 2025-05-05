@@ -14,75 +14,46 @@ dist = 6.6 * u.kpc  # [GAIA-2018]
 area = 4 * np.pi * dist ** 2
 
 
-def x_ray_measurements():
-    # ------------------------------------
+def hard_state_spectrum():
     # keV measurements [keV, 2015] figure 6
-    name = "Swift/XRT + NuStar, 2014 (hard)"
+    energies, fluxes = np.loadtxt(os.path.join(SPECTRUM_DIR, "X-Ray-hard.txt"), skiprows=1, unpack=True, delimiter=',')
 
-    with open(os.path.join(SPECTRUM_DIR, "X-Ray.txt"), "r") as f:
-        d = f.readlines()
+    energies = (energies * u.keV).to(u.eV)
+    fluxes = (fluxes * 1 / (u.cm ** 2 * u.s) * energies).to(flux_unit)
+    f_err = np.zeros_like(fluxes)
+    e_err = np.zeros_like(energies)
+    return energies, fluxes, f_err, f_err, e_err, e_err
 
-    n = len(d) - 1
-    energies, fluxes = np.zeros(n) * u.eV, np.zeros(n) * flux_unit
-    for i, line in enumerate(d[1:]):
-        dat = line.split(',')
-        energies[i] = (float(dat[0].strip()) * u.keV).to(u.eV)
-        fluxes[i] = abs(float(dat[1].strip()) * energies[i] / (u.cm ** 2 * u.s)).to(flux_unit)
 
-    plt.errorbar(energies.value, fluxes.value, 0.1 * fluxes.value,
-                 marker='o', markersize=3, color='#00d', alpha=.6, label=name, linestyle='None')
-
-    # ------------------------------------
-    # keV measurements [keV, 2015] figure 6
-    name = "Swift/XRT + NuStar, 2014 (soft)"
-
-    with open(os.path.join(SPECTRUM_DIR, "X-Ray-soft.txt"), "r") as f:
-        d = f.readlines()
-
-    n = len(d) - 1
-    energies, counts = np.zeros(n) * u.eV, np.zeros(n) / (u.keV * u.s)
-    for i, line in enumerate(d[1:]):
-        dat = line.split(',')
-        energies[i] = (float(dat[0].strip()) * u.keV).to(u.eV)
-        counts[i] = abs(float(dat[1].strip()) / (u.keV * u.s))
-
-    total_flux = 5.87 * 1e-10 * flux_unit
-
-    normalization = np.trapezoid(counts, energies)
-
-    fluxes = total_flux * energies * counts / normalization
-
-    plt.errorbar(energies.value, fluxes.value, 0.1 * fluxes.value,
-                 marker='^', markersize=3, color='#77f', alpha=.6, label=name, linestyle='None')
-
-    # -------------------
+def nu_star_2021():
     # nuSTAR measurements, 2021 [keV-2025] figure 7
-    name = "NuStar, 2021"
 
-    with open(os.path.join(SPECTRUM_DIR, "keV_spectrum-2025.txt"), "r") as f:
-        d = f.readlines()
+    energies, fluxes = np.loadtxt(os.path.join(SPECTRUM_DIR, "keV_spectrum-2025.txt"),
+                                  skiprows=1, unpack=True, delimiter=',')
 
-    n = len(d) - 1
-    energies, fluxes = np.zeros(n) * u.eV, np.zeros(n) * flux_unit
-    for i, line in enumerate(d[1:]):
-        dat = line.split(',')
-        energies[i] = (float(dat[0].strip()) * u.keV).to(u.eV)
-        fluxes[i] = abs(float(dat[1].strip()) * u.erg / (u.cm ** 2 * u.s)).to(flux_unit)
+    energies = (energies * u.keV).to(u.eV)
+    fluxes = fluxes * flux_unit
 
-    plt.errorbar(energies.value, fluxes.value, 0.2 * fluxes.value, fmt='.', label=name, linestyle='None')
+    f_err = np.zeros_like(fluxes)
+    e_err = np.zeros_like(energies)
+
+    return energies, fluxes, f_err, f_err, e_err, e_err
 
 
-    # --------------------------------
-    # constraint, [Suzuki et al., 2025]
+def constraint_2025_Suzuki():
+    x = np.array([2048.8939870443005, 10430.995959331496])
+    y = np.array([[5.226151097035918e-12, 5.281136737606013e-12],
+                [1.933586584317008e-12, 1.933586584317008e-12]])
 
-    name = "XRISM, 2024 (broad)"
+    energy = np.array([np.sqrt(x[0] * x[1])]) * u.eV
+    flux = np.array([np.prod(y, axis=(0, 1))**(1/4)]) * flux_unit
+    f_l, f_p = np.sqrt(np.prod(y[0])) * flux_unit - flux, flux - np.sqrt(np.prod(y[1])) * flux_unit
+    e_l, e_p = energy - x[0] * u.eV, x[1] * u.eV - energy
+    print(e_l, e_p, f_l, f_p)
+    return energy, flux, f_l, f_p, e_l, e_p
 
-    x = (np.array([2048.8939870443005, 10430.995959331496]) * u.eV).value
-    y = (np.array([[5.226151097035918e-12, 5.281136737606013e-12],
-                   [1.933586584317008e-12, 1.933586584317008e-12]]) * flux_unit).value
 
-    plt.fill_between(x, y[0], y[1], label=name)
-
+def revnivtsev_spectra():
     # FOUR SPECTRA FROM REVNIVTSEV ET AL
     # [XRay-2002] Super-Eddington outburst
     names = ["RXTE/PCA/HEXTE, 1999, 50-170 s", "RXTE/PCA/HEXTE, 1999, 170-300 s",
@@ -98,5 +69,19 @@ def x_ray_measurements():
         flux = (flux * u.keV ** 2 / (u.s * u.cm ** 2 * u.keV)).to(flux_unit)
 
         plt.scatter(energy, flux, marker=markers[i], s=15, label=names[i], color=colors[i], alpha=0.6)
+    return
+
+
+def x_ray_measurements():
+    names = ["Swift/XRT + NuStar, 2014 (hard)", "NuStar, 2021", "XRISM, 2024 (broad)"]
+    functions = [hard_state_spectrum, nu_star_2021, constraint_2025_Suzuki]
+
+    for i in range(len(names)):
+        print(names[i])
+        e, f, f_l, f_p, e_l, e_p = functions[i]()
+        plt.errorbar(e, f, xerr=[e_l, e_p], yerr=[f_l, f_p],
+                     marker='o', markersize=3, label=names[i], linestyle='None')
+
+    revnivtsev_spectra()
 
     return
