@@ -27,7 +27,7 @@ def set_plotting_defaults():
 
 
 def save_figure(title):
-    plt.savefig(os.path.join(PICS_DIR, f"{title}.png"), dpi=600)
+    plt.savefig(os.path.join(PICS_DIR, f"{title}.png"), dpi=600, transparent=True)
     plt.savefig(os.path.join(PICS_DIR, f"{title}.pdf"))
     return
 
