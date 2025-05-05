@@ -4,9 +4,9 @@ import pickle
 import numpy as np
 from astropy import units as u
 from astropy.constants import codata2010 as cst
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, RegularGridInterpolator
 
-from config.settings import ELECTRONS_DIR
+from config.settings import ELECTRONS_DIR, ISRF_DIR
 from src.ebl_photon_density import CMBOnly
 from src.klein_nishina import klein_nishina_on_a_given_photon_density_profile
 
@@ -23,7 +23,7 @@ def get_background_density(e_bg):
 
     # infrared background density upload
     lg_e_bg = np.log10(e_bg.to(e_unit).value)
-    with open("local_density.pck", 'rb') as f:
+    with open(os.path.join(ISRF_DIR, "local_density.pck"), 'rb') as f:
         e_bg1, e_d_bg1 = pickle.load(f)
     e_bg1 = np.flip(e_bg1)
     e_d_bg1 = np.flip(e_d_bg1)
@@ -79,5 +79,18 @@ def load_tabulated_matrix():
     return data[0], data[1], data[2]
 
 
+def interpolate_tabulated_matrix():
+    electron_energy, photon_energy, result = load_tabulated_matrix()
+    lg_electron_energy = np.log10(electron_energy.to(u.eV).value)
+    lg_photon_energy = np.log10(photon_energy.to(u.eV).value)
+    lg_matrix = np.log10(result.to(1 / (u.eV * u.s)).value + np.finfo(float).tiny)
+
+    matrix_interp = RegularGridInterpolator((lg_electron_energy, lg_photon_energy), lg_matrix)
+    pickle.dump([lg_electron_energy, lg_photon_energy, matrix_interp],
+                open(os.path.join(ELECTRONS_DIR, "spectrum_interpolated.pck"), "wb"))
+    return
+
+
 if __name__ == '__main__':
     tabulate_the_spectrum()
+    interpolate_tabulated_matrix()
