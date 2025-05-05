@@ -39,7 +39,7 @@ def test_ic_spectrum_modification():
 
     plt.tight_layout()
 
-    # save_figure("spectrum_UHE")
+    save_figure("spectrum_UHE")
     plt.show()
     return
 
