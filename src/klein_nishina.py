@@ -23,16 +23,16 @@ def klein_nishina_on_a_given_photon_density_profile(g1, e1, e2, bg_phot_density,
                                                     if_norm: bool = False, mass=None):
     """
     Calculate the Klein-Nishina scattering on a given photon density profile
-    :param g1: electron gamma
+    :param g1: [DL], electron gamma
 
-    :param e1: outgoing photon energy
-    :param e2: incoming photon energy
-    :param e12: e1 x e2 matrix
-    :param e21: e2 x e1 matrix
+    :param e1: [eV], outgoing photon energy
+    :param e2: [eV], incoming photon energy
+    :param e12: [eV], e1 x e2 matrix
+    :param e21: [eV], e2 x e1 matrix
 
-    :param bg_phot_density: background photon density profile
+    :param bg_phot_density: [cm-3 eV-1] background photon density profile
     :param if_norm: normalizes the result to the total scattering rate
-    :param mass: mass of the particle
+    :param mass: [g], mass of the particle
 
     :return: dN / dt de1
     """
@@ -48,7 +48,7 @@ def klein_nishina_on_a_given_photon_density_profile(g1, e1, e2, bg_phot_density,
 
     F1 = klein_nishina_profile_function_x(x_12, g_e21)
 
-    result = 4 * const.sigma_T * const.c / (3 * g1 ** 2) * trapezoid(bg_phot_density * F1, np.log10(e21 / u.eV), axis=1)
+    result = 4 * const.sigma_T * const.c / (3 * g1 ** 2) * trapezoid(bg_phot_density * F1, np.log(e21 / u.eV), axis=1)
 
     if if_norm:
         norm = trapezoid(result, e1, axis=0)
@@ -68,6 +68,8 @@ def klein_nishina_on_CMB(g1, e1, e2=None, e12=None, e21=None, if_norm: bool = Fa
     if e2 is None:
         e2 = 10 ** np.linspace(-9, -1, 10 ** 3) * u.eV
 
+    e12, e21 = np.meshgrid(e1, e2, indexing='ij')
+
     n_CMB = bbr_density(e21, T_CMB)
 
-    return klein_nishina_on_a_given_photon_density_profile(g1, e1, e2, n_CMB)
+    return klein_nishina_on_a_given_photon_density_profile(g1, e1, e2, n_CMB, if_norm=if_norm)

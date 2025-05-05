@@ -95,7 +95,6 @@ def save_the_spectrum():
     f_cor, f_l_cor, f_p_cor = [], [], []
 
     for i, name in enumerate(names):
-        print(e[i].unit)
         extinction_factor_i = take_extinction_into_account(e[i], distance)
         f_cor.append(f[i] * extinction_factor_i)
         f_l_cor.append(f_l[i] * extinction_factor_i)
