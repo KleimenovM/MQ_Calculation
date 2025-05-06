@@ -1,8 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+import astropy.units as u
+from astropy.constants import codata2010 as cst
+
 from scipy.special import gamma, kv
 
+from config.constants import CST_HC, CST_e
 from config.units import Gauss, Franklin
 
 
@@ -33,6 +37,14 @@ def first_synchrtoron_function_approximation(x):
 
     # return the convolution
     return delta_1 * F_low + delta_2 * F_high
+
+
+def single_electron_synchrotron_emission_power(electron_energy, photon_energy, bfield):
+    e_c = cst.h * cst.c / (4 * np.pi) * 3 * CST_e * bfield * electron_energy**2 / (cst.m_e * cst.c**2)**3
+    x = (photon_energy / e_c).to('')  # [DL]
+    p_dl = first_synchrtoron_function_approximation(x)
+    dim_factor = np.sqrt(3) * CST_e**3 * bfield / (cst.h * cst.m_e * cst.c**2)
+    return dim_factor * p_dl
 
 
 if __name__ == '__main__':

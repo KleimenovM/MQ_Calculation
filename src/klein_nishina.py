@@ -57,7 +57,7 @@ def klein_nishina_on_a_given_photon_density_profile(g1, e1, e2, bg_phot_density,
     return result
 
 
-def klein_nishina_on_CMB(g1, e1, e2=None, e12=None, e21=None, if_norm: bool = False):
+def klein_nishina_on_CMB(g1, e1, e2=None, if_norm: bool = False):
     """
     Get single Klein-Nishina CMB scattering photon density
     g1: gamma of the incident electron
