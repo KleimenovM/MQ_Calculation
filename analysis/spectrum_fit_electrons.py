@@ -11,7 +11,7 @@ import astropy.units as u
 from astropy.constants import codata2010 as cst
 from scipy.integrate import trapezoid
 
-from config.plotting import set_plotting_defaults, Tab10
+from config.plotting import set_plotting_defaults, Tab10, save_figure
 from config.settings import SPECTRUM_DIR, ELECTRONS_DIR, MCMC_ELECTRONS_SYNCH_ONLY
 from config.units import Franklin, Gauss, flux_unit
 
@@ -19,20 +19,20 @@ from src.electron_spectrum_parametrization import SpectrumParametrization
 from src.likelihood_elements import log_uniform, log_likelihood_measurements
 
 
-class SynchrotronOnly:
+class SynchrotronSpectrumFit:
     def __init__(self, nwalkers: int = 32, nsteps: int = 5000):
         self.nwalkers = nwalkers
         self.nsteps = nsteps
 
         self.ndim = 5  # four spectral parameters + b2t
         # source parameters   eta gamma  k1   k2   B^2t
-        self.mean = np.array([0.0, 2.0, 0.0, 5.0, 3.0])  # [DL]
-        self.width = np.array([5.0, 3.0, 3.0, 5.0, 3.0])  # [DL]
+        self.mean = np.array([0.0, 2.0, 0.0, 10.0, 3.0])  # [DL]
+        self.width = np.array([5.0, 3.0, 3.0, 1e-4, 3.0])  # [DL]
         self.start = self.mean + self.width * (np.random.random([self.nwalkers, self.ndim]) - 0.5)   # [DL]
 
         self.thin = 25
 
-        self.spectrum = SpectrumParametrization(n0=1e-27 / (u.eV * u.cm ** 3), e0=1e12 * u.eV,
+        self.spectrum = SpectrumParametrization(n0=1e-26 / (u.eV * u.cm ** 3), e0=1e12 * u.eV,
                                                 eta0=0.0, p0=2.0, k10=0.0, k20=3.0)
 
         # measurements
@@ -101,7 +101,7 @@ class SynchrotronOnly:
             result += log_uniform(theta[i], self.mean[i], self.width[i])
         return result
 
-    def model(self, parameters):
+    def cooled_spectrum(self, parameters):
         theta = parameters[:-1]  # [DL]
         b2t = 10 ** parameters[-1]  # [DL]
 
@@ -114,6 +114,11 @@ class SynchrotronOnly:
         dn_de_cooled = np.zeros_like(self.electron_energy.value) * (1 / (u.eV * u.cm ** 3))
         dn_de_cooled[allowed] = (self.spectrum.dn_de(modified_energy, *theta) /
                                  (1 - self.sharp_1Gauss * b2t * allowed_energy) ** 2)  # [eV-1 cm-3]
+        return dn_de_cooled
+
+    def model(self, parameters):
+        # electron density after cooling
+        dn_de_cooled = self.cooled_spectrum(parameters)
 
         # number of photons homogenously radiated per unit volume of the nebula (dN/dE.dt.dV)
         photon_spectrum = trapezoid(self.radiation_matrix.T * dn_de_cooled, self.electron_energy)  # [eV-1 s-1 cm-3]
@@ -137,56 +142,16 @@ class SynchrotronOnly:
 
 
 def electron_synchrotron_only(nsteps=2000, nwalkers=32):
-    synch = SynchrotronOnly(nsteps=nsteps, nwalkers=nwalkers)
+    synch = SynchrotronSpectrumFit(nsteps=nsteps, nwalkers=nwalkers)
     result = synch.run()
 
     pickle.dump([result, synch],
-                open(os.path.join(MCMC_ELECTRONS_SYNCH_ONLY, f"electrons_{nsteps}n_{nwalkers}w.pck"), "wb"))
+                open(os.path.join(MCMC_ELECTRONS_SYNCH_ONLY, f"electrons_{nsteps}n_{nwalkers}w_no_cutoff.pck"), "wb"))
 
     return
-
-
-def plot_mcmc_results(nsteps=2000, nwalkers=32):
-    data = pickle.load(open(os.path.join(MCMC_ELECTRONS_SYNCH_ONLY, f"electrons_{nsteps}n_{nwalkers}w.pck"), "rb"))
-    result, synch = data[0], data[1]
-
-    set_plotting_defaults()
-    mean_result = np.mean(result, axis=0)
-
-    print(mean_result)
-
-    electron_number_density = synch.spectrum.tot_n(*mean_result[:-1])
-    electron_energy_density = synch.spectrum.tot_e(*mean_result[:-1])
-
-    print(electron_number_density, electron_energy_density)
-
-    data = pickle.load(open(os.path.join(SPECTRUM_DIR, "UHE_spectrum_corrected.pck"), "rb"))
-    names, e, f_cor, f_l_cor, f_p_cor, e_l, e_p = data
-
-    set_plotting_defaults()
-
-    for i, name in enumerate(names):
-        plt.errorbar(e[i], f_cor[i], xerr=[e_l[i], e_p[i]], yerr=[f_l_cor[i], f_p_cor[i]],
-                     fmt='o', linestyle='None', uplims=f_p_cor[i] <= 0,
-                     color=Tab10[i], label=f' ')
-
-    for res in result[::nsteps // 200]:
-        plt.plot(synch.photon_energy, synch.model(res), alpha=.02, color='blue')
-
-    plt.xscale('log')
-    plt.xlim(1e9, 1e15)
-    plt.xlabel("Energy, eV")
-
-    plt.yscale('log')
-    plt.ylim(1e-13, 1e-10)
-    plt.ylabel(r"Flux, $\mathrm{erg~cm^{-2}~s^{-1}}$")
-
-    plt.tight_layout()
-    plt.show()
 
 
 if __name__ == '__main__':
     n = 2000
     nw = 64
-    # electron_synchrotron_only(nsteps=n, nwalkers=nw)
-    plot_mcmc_results(n, nw)
+    electron_synchrotron_only(nsteps=n, nwalkers=nw)

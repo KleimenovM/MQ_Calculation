@@ -7,7 +7,7 @@ from astropy.constants import codata2010 as cst
 from scipy.special import gamma, kv
 
 from config.constants import CST_HC, CST_e
-from config.units import Gauss, Franklin
+from config.units import rad_unit
 
 
 def first_synchrtoron_function_approximation(x):
@@ -45,6 +45,32 @@ def single_electron_synchrotron_emission_power(electron_energy, photon_energy, b
     p_dl = first_synchrtoron_function_approximation(x)
     dim_factor = np.sqrt(3) * CST_e**3 * bfield / (cst.h * cst.m_e * cst.c**2)
     return dim_factor * p_dl
+
+
+def electron_synchrotron_emission_power(electron_energy, electron_density, photon_energy, bfield):
+    result = np.zeros([electron_energy.size, photon_energy.size]) * (1/u.s)
+    for i, e_i in enumerate(electron_energy):
+        result[i, :] = single_electron_synchrotron_emission_power(e_i, photon_energy, bfield)
+    return np.trapezoid(result.T * electron_density, electron_energy, axis=1)
+
+
+def electron_synchrotron_emission_luminosity(electron_energy, electron_density, electron_volume,
+                                             photon_energy, bfield):
+    """
+    Calculate electron synchrotron luminocity as if from a point-like object
+    with a given electron density, electron volume (can be energy-dependent),
+    output photon energy and magnetic field value
+    :param electron_energy: [eV], electron energy.
+    :param electron_density: [eV-1 cm-3], electron density.
+    :param electron_volume: [cm3], electron volume.
+    :param photon_energy: [eV], output photon energy.
+    :param bfield: [Gauss], magnetic field value.
+    :return: [1/s], spectral luminosity in synchrotron photons
+    """
+    result = np.zeros([electron_energy.size, photon_energy.size]) * (1 / u.s)
+    for i, e_i in enumerate(electron_energy):
+        result[i, :] = single_electron_synchrotron_emission_power(e_i, photon_energy, bfield)
+    return np.trapezoid(result.T * electron_density * electron_volume, electron_energy, axis=1)
 
 
 if __name__ == '__main__':
