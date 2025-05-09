@@ -8,7 +8,7 @@ from astropy.constants import codata2010 as cst
 import astropy.units as u
 from aafragpy import get_cross_section, get_spectrum
 
-from analysis.electron_synchrotron_only import SynchrotronOnly
+from analysis.spectrum_fit_electrons import SynchrotronSpectrumFit
 from config.plotting import Tab10, save_figure
 from config.settings import SPECTRUM_DIR
 
@@ -33,7 +33,7 @@ def main():
     data = pickle.load(open(os.path.join(SPECTRUM_DIR, "UHE_spectrum_corrected.pck"), "rb"))
     names, e, f_cor, f_l_cor, f_p_cor, e_l, e_p = data
 
-    synch_only = SynchrotronOnly()
+    synch_only = SynchrotronSpectrumFit()
 
     for i, name in enumerate(names):
         plt.errorbar(e[i], f_cor[i], xerr=[e_l[i], e_p[i]], yerr=[f_l_cor[i], f_p_cor[i]],
