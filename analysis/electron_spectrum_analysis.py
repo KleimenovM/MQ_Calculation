@@ -47,7 +47,7 @@ def energy_backpropagation(cooling: Cooling, e_timescale=10000 * u.PeV,
     print(f"time_max = {times[-1]:.0f}")
 
     # energy grid
-    energies = np.logspace(10, 19, N_energy) * u.eV
+    energies = np.logspace(9, 19, N_energy) * u.eV
     print(f"min_energy {energies[0]:.0g}, max_energy {energies[-1]:.0g}")
 
     # losses
@@ -63,7 +63,6 @@ def get_the_modulation_coefficient(cooling: Cooling, time_sol, energy_sol):
     """
     Calculates the spectrum from the method of characteristics.
 
-    :param spectrum: An instance of a SpectrumParametrization class, which defines the spectrum parametrization.
     :param cooling: An instance of a Cooling class, which defines the cooling mechanisms and power loss function.
     :param time_sol: The computed time solution from the energy loss calculation.
     :param energy_sol: The computed energy solution from the energy loss calculation.

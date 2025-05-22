@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.constants import codata2010 as cst
 
+from config.plotting import set_plotting_defaults, save_figure
 from config.settings import SPECTRUM_DIR, PICS_DIR
 from config.units import flux_unit
 
@@ -14,7 +15,7 @@ from spectrum.measurements_xray import x_ray_measurements
 from spectrum.measurements_optical import optical_measurements
 from spectrum.measurements_gamma import gamma_ray_measurements
 
-dist = 6.6 * u.kpc  # [GAIA-2018]
+dist = 6.1 * u.kpc  # [GAIA-2018]
 area = 4 * np.pi * dist ** 2
 
 
@@ -41,7 +42,9 @@ def fit_low_energy_part():
 
 
 def test_full_spectrum():
-    plt.figure(figsize=(12, 8))
+    set_plotting_defaults()
+
+    plt.figure(figsize=(12, 7))
 
     radio_measurements()
     optical_measurements()
@@ -58,15 +61,15 @@ def test_full_spectrum():
 
     ax.set_ylabel(r"$\epsilon^2 dN/d\epsilon,~\mathrm{erg~cm^{-2}~s^{-1}}$")
     ax.set_yscale('log')
-    plt.ylim(1e-21, 1e-7)
+    plt.ylim(1e-18, 1e-7)
     plt.xlim(1e-8, 1e16)
 
     plt.grid(color='lightgray', linestyle='--')
-    plt.legend(ncol=3)
+    plt.legend(ncol=3, loc='lower center', bbox_to_anchor=(0.5, 1.05),)
 
     plt.tight_layout()
-    # plt.savefig(os.path.join(PICS_DIR, "spectrum.png"), dpi=600)
-    # plt.savefig(os.path.join(PICS_DIR, "spectrum.pdf"))
+    plt.tight_layout()
+    # save_figure("spectrum")
     plt.show()
     return
 

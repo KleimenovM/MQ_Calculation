@@ -40,17 +40,31 @@ def nu_star_2021():
     return energies, fluxes, f_err, f_err, e_err, e_err
 
 
-def constraint_2025_Suzuki():
-    x = np.array([2048.8939870443005, 10430.995959331496])
-    y = np.array([[5.226151097035918e-12, 5.281136737606013e-12],
-                [1.933586584317008e-12, 1.933586584317008e-12]])
+def constraint_XRISM():
+    flux_per_area_unit = flux_unit / u.arcmin**2
+    x = np.array([2e3, 1e4]) * u.eV  # 2-10 keV band
+    x_mid = np.array([np.sqrt(x[0] * x[1]).value]) * u.eV
+    x_err_l, x_err_p = x_mid - x[0], x[1] - x_mid
+    y_per_arcmin = 9.2e-15 * flux_per_area_unit
+    y_err = 1.1e-15 * flux_per_area_unit
 
-    energy = np.array([np.sqrt(x[0] * x[1])]) * u.eV
-    flux = np.array([np.prod(y, axis=(0, 1))**(1/4)]) * flux_unit
-    f_l, f_p = np.sqrt(np.prod(y[0])) * flux_unit - flux, flux - np.sqrt(np.prod(y[1])) * flux_unit
-    e_l, e_p = energy - x[0] * u.eV, x[1] * u.eV - energy
-    print(e_l, e_p, f_l, f_p)
-    return energy, flux, f_l, f_p, e_l, e_p
+    # article area value 629.4 arcmin2
+    emission_area_min = 1 * u.deg * 0.2 * u.deg
+    emission_area_max = 4 * emission_area_min
+    emission_area = np.sqrt(emission_area_min * emission_area_max)
+
+    y_real = np.array([(y_per_arcmin * emission_area).to(flux_unit).value]) * flux_unit
+    y_err_min = y_real - ((y_per_arcmin - y_err) * emission_area_min).to(flux_unit)
+    y_err_max = ((y_per_arcmin + y_err) * emission_area_max).to(flux_unit) - y_real
+    return x_mid, y_real, y_err_min, y_err_max, x_err_l, x_err_p
+
+
+def constraint_Chandra():
+    x = (np.array([3.3513512672260234e-9]) * u.TeV).to(u.eV)
+    x_low, x_high = (np.array([1.2248132360494609e-9, 9.532031470019544e-9]) * u.TeV).to(u.eV)
+    y = np.array([1.1094676214563854e-11]) * flux_unit
+    y_err = np.zeros(1) * flux_unit
+    return x, y, y_err, y_err, x - x_low, x_high - x
 
 
 def revnivtsev_spectra():
@@ -73,8 +87,8 @@ def revnivtsev_spectra():
 
 
 def x_ray_measurements():
-    names = ["Swift/XRT + NuStar, 2014 (hard)", "NuStar, 2021", "XRISM, 2024 (broad)"]
-    functions = [hard_state_spectrum, nu_star_2021, constraint_2025_Suzuki]
+    names = ["Swift/XRT + NuStar, 2014 (hard)", "NuStar, 2021", "XRISM, 2024 (broad)", "Chandra, 2024 (H.E.S.S.)"]
+    functions = [hard_state_spectrum, nu_star_2021, constraint_XRISM, constraint_Chandra]
 
     for i in range(len(names)):
         print(names[i])

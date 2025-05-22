@@ -16,4 +16,5 @@ SHAPE_DIR = os.path.join(DATA_DIR, 'shape')
 MCMC_DIR = os.path.join(DATA_DIR, 'mcmc_samples')
 
 MCMC_ELECTRONS_SYNCH_ONLY = os.path.join(MCMC_DIR, 'electrons_synch_only')
+MCMC_ELECTRONS_FULL = os.path.join(MCMC_DIR, 'electrons_joint')
 MCMC_PROTONS = os.path.join(MCMC_DIR, 'protons')
