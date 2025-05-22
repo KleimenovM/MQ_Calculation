@@ -11,5 +11,5 @@ CST_e = cst.e.gauss.value * Franklin
 CST_m_e = (cst.m_e * cst.c**2).to(u.eV)
 
 T_CMB = 2.72548 * u.K  # [K], CMB temperature, Source: # https://en.wikipedia.org/wiki/Cosmic_microwave_background
-E_CMB = 3 * zeta(4) / zeta(3) * T_CMB  # [eV]
+E_CMB = (3 * zeta(4) / zeta(3) * cst.k_B * T_CMB).to(u.eV)  # [eV]
 

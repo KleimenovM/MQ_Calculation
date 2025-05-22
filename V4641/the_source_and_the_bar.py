@@ -7,6 +7,7 @@ from astropy.coordinates import SkyCoord
 from astropy.coordinates import Galactic, ICRS
 
 from astropy.coordinates import Galactocentric, galactocentric_frame_defaults
+from mpmath.libmp import normalize
 
 
 def length(v):
@@ -170,12 +171,27 @@ def sun(ax, galactocentric):
     return Sun
 
 
+def sun_velocity(ax, Sun, sun_velocity_value):
+    sun_velocity_vector = sun_velocity_value * unit_vector(np.cross(Sun.xyz, [0, 0, 1]))
+    print(f"Velocity of the source in the bar: {length(sun_velocity_vector):.0f} km/s")
+    return sun_velocity_vector
+
+
 def v4641(ax, galactocentric, dist):
     V4641_icrs = SkyCoord(18 * u.h + 19.36 * u.min, -25 * u.deg - 24.26 * u.arcmin,
                           distance=dist, frame=ICRS)
     V4641 = V4641_icrs.transform_to(galactocentric).cartesian
     ax.scatter(*V4641.xyz, marker='s', color='purple', label='V4641', s=40)
     return V4641
+
+
+def v4641_velocity(ax, V4641, Omega_bar, bar_axes):
+    # velocity of the source in the bar
+    velocity_value = Omega_bar * length(V4641.xyz)  # [km/s]
+    V4641_hor = np.cross(V4641.xyz, bar_axes[2])
+    velocity_vector = velocity_value * unit_vector(V4641_hor)
+    print(f"Velocity of the source in the bar: {length(velocity_vector):.0f} km/s")
+    return velocity_vector
 
 
 def line_of_sight_vector(ax, source, Sun):
@@ -202,10 +218,10 @@ def low_energy_jet(ax, galactocentric, los_unit_vector, V4641, dist):
 
 def high_energy_jet(ax, galactocentric, V4641, dist, size_north=0.1 * u.kpc, size_south=0.1 * u.kpc):
     V4641_North_icrs = SkyCoord(18 * u.h + 19.44 * u.min,
-                                -25 * u.deg - 9.84 * u.arcmin,
+                                -25 * u.deg - 0 * u.arcmin,
                                 distance=dist, frame=ICRS)
     V4641_South_icrs = SkyCoord(18 * u.h + 19.56 * u.min,
-                                -25 * u.deg - 35.34 * u.arcmin,
+                                -26 * u.deg - 5 * u.arcmin,
                                 distance=dist, frame=ICRS)
     V4641_North = V4641_North_icrs.transform_to(galactocentric).cartesian
     V4641_South = V4641_South_icrs.transform_to(galactocentric).cartesian
@@ -233,10 +249,10 @@ def project_to_bar_axis(ax, uhe_north, uhe_south, V4641, Sun, bar_axes):
     ax.quiver(*V4641.xyz, *R_north, color='green', label='projected jet')
     ax.quiver(*V4641.xyz, *R_south, color='green')
 
-    print(f"angle {angle(R_north, uhe_north - V4641.xyz):.1f}, length {length(R_north):.3f} kpc")
-    print(f"angle {angle(R_south, uhe_south - V4641.xyz):.1f}, length {length(R_south):.3f} kpc")
+    print(f"angle {angle(R_north, uhe_north - V4641.xyz):.1f}, length {length(R_north):.3f}")
+    print(f"angle {angle(R_south, uhe_south - V4641.xyz):.1f}, length {length(R_south):.3f}")
 
-    return R_north
+    return V4641.xyz + R_north, V4641.xyz + R_south
 
 
 def plot_the_source_and_the_bar():
@@ -257,25 +273,35 @@ def plot_the_source_and_the_bar():
 
     # Sun
     Sun = sun(ax, galactocentric)
+    # Sun velocity
+    Sun_velocity = sun_velocity(ax, Sun, 220 * u.km/u.s)
 
     # V4641 point source
-    dist = 6.4 * u.kpc
+    dist = 6.1 * u.kpc
+    omega_bar = 120 * u.km/u.s/u.kpc
     V4641 = v4641(ax, galactocentric, dist)
-    is_in_the_bulge(V4641.xyz)
-    is_in_the_bar(V4641.xyz)
 
     # line of sight vector
     los_unit_vector = line_of_sight_vector(ax, V4641, Sun)
+
+    # V4641 absolute and relative velocity and its projection onto the line of sight
+    V4641_vel_abs = v4641_velocity(ax, V4641, omega_bar, bar_vecs)
+    V4641_vel_rel = V4641_vel_abs - Sun_velocity
+    V4641_radial = projection(V4641_vel_rel, los_unit_vector)
+    print(f"Radial velocity as seen from Earth: {length(V4641_radial):.0f}")
+
+    # Solar velocity
 
     # V4641 low-energy jet
     jet = low_energy_jet(ax, galactocentric, los_unit_vector, V4641, dist)
 
     # V4641 high-energy jet [H.E.S.S. preliminary, 2024]
     UHE_north, UHE_south = high_energy_jet(ax, galactocentric, V4641, dist)
-    project_to_bar_axis(ax, UHE_north, UHE_south, V4641, Sun, bulge_vecs)
+    R_north, R_south = project_to_bar_axis(ax, UHE_north, UHE_south, V4641, Sun, bulge_vecs)
 
-    print(f"{180 * u.deg - angle(jet, UHE_north - V4641.xyz):.1f}")
-    print(f"{angle(jet, UHE_south - V4641.xyz):.1f}")
+    dist_r_north = np.sqrt(R_north[0] ** 2 + R_north[1] ** 2)
+    dist_r_south = np.sqrt(R_south[0] ** 2 + R_south[1] ** 2)
+    print(f"{dist_r_north:.3f}, {dist_r_south:.3f}")
 
     ax.view_init(elev=90, azim=180, roll=0)
     plt.legend()
