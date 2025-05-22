@@ -6,7 +6,7 @@ from astropy.constants import codata2010 as cst
 
 from scipy.special import gamma, kv
 
-from config.constants import CST_HC, CST_e
+from config.constants import CST_HC, CST_e, CST_m_e
 from config.units import rad_unit
 
 
@@ -40,10 +40,10 @@ def first_synchrtoron_function_approximation(x):
 
 
 def single_electron_synchrotron_emission_power(electron_energy, photon_energy, bfield):
-    e_c = cst.h * cst.c / (4 * np.pi) * 3 * CST_e * bfield * electron_energy**2 / (cst.m_e * cst.c**2)**3
+    e_c = CST_HC / (4 * np.pi) * 3 * CST_e * bfield * (electron_energy**2 - CST_m_e**2) / CST_m_e**3
     x = (photon_energy / e_c).to('')  # [DL]
     p_dl = first_synchrtoron_function_approximation(x)
-    dim_factor = np.sqrt(3) * CST_e**3 * bfield / (cst.h * cst.m_e * cst.c**2)
+    dim_factor = np.sqrt(3) * CST_e**3 * bfield / (cst.h * CST_m_e)
     return dim_factor * p_dl
 
 

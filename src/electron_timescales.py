@@ -11,7 +11,7 @@ import astropy.units as u
 from astropy.constants import codata2018 as cst
 
 from config.settings import ISRF_DIR
-from config.units import Franklin
+from config.units import Franklin, Gauss
 from src.ebl_photon_density import CMBOnly
 from src.klein_nishina import klein_nishina_on_a_given_photon_density_profile
 
@@ -43,7 +43,7 @@ def inverse_compton_timescale(energy, mass):
         g_i = (e_i / (mass * cst.c ** 2)).to('')
         ans_i = klein_nishina_on_a_given_photon_density_profile(g1=g_i, e1=e1, e2=e, bg_phot_density=d,
                                                                 e12=e12, e21=e21, if_norm=False).to(1 / (u.eV * u.s))
-        f = interp1d(lg_e1, np.log(10) * e1 * e1 * ans_i, kind='cubic')
+        f = interp1d(lg_e1, e1 * e1 * ans_i, kind='cubic')
         ans[i] = quad(f, lg_e1_min, lg_e1_max)[0] * u.eV / u.s
     return (energy / ans).to(u.year)
 
@@ -56,8 +56,8 @@ def synchrotron_timescale(energy, bfield, mass):
     return (energy / P_syn).to(u.year)
 
 
-def diffusion_timescale(energy, length):
-    D = 1e30 * u.cm**2 / u.s * (energy / u.PeV)**(1/3)
+def diffusion_timescale(energy, length, bfield):
+    D = 1e30 * u.cm**2 / u.s * (energy / u.PeV / bfield * 1e-6 * Gauss)**(1/3)
     return (length ** 2 / (2 * D)).to(u.year)
 
 
