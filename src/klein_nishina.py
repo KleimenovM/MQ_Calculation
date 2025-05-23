@@ -13,6 +13,12 @@ def klein_nishina_profile_function_x(x1, g_e1):
 
 
 def klein_nishina_profile_function(q1, g_e1):
+    """
+    Klein-Nishina profile (see [Blumenthal et al. (1970)]
+    :param q1: [DL]
+    :param g_e1: []
+    :return:
+    """
     q1 = q1.clip(1e-32, 1)
     result = (2 * q1 * np.log(q1) + (1 + 2 * q1) * (1 - q1) + 1 / 2 * (g_e1 * q1) ** 2 / (1 + g_e1 * q1) * (1 - q1))
     return result
@@ -22,7 +28,7 @@ def klein_nishina_on_a_given_photon_density_profile(g1, e1, e2, bg_phot_density,
                                                     e12=None, e21=None,
                                                     if_norm: bool = False, mass=None):
     """
-    Calculate the Klein-Nishina scattering on a given photon density profile
+    Calculate the Klein-Nishina scattering on a given photon density profile [Blumenthal et al. (1970)]
     :param g1: [DL], electron gamma
 
     :param e1: [eV], outgoing photon energy

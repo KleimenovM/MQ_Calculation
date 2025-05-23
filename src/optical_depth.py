@@ -21,6 +21,9 @@ MPC_M: float = PC_M * 1e6  # [m/MPc], 1 Mpc in m
 
 
 class OpticalDepth:
+    """
+    Calculate optical depth based on gamma-gamma interaction cross-section
+    """
     def __init__(self, ebl: CosmicBackground, series_expansion: bool = False):
         self.lg_e_low: float = -5.0  # [DL], lg(e/eV), lower background photon energy limit
         self.lg_e_high: float = 2.0  # [DL], lg(e/eV), upper background photon energy limit

@@ -14,34 +14,29 @@ from config.settings import ISRF_DIR
 from config.units import Franklin, Gauss
 from src.ebl_photon_density import CMBOnly
 from src.klein_nishina import klein_nishina_on_a_given_photon_density_profile
-
-
-def get_total_density():
-    path = os.path.join(ISRF_DIR, 'local_density.pck')
-    with open(path, 'rb') as f:
-        e_bg, e_d_bg = pickle.load(f)
-        e_bg = np.flip(e_bg)
-        e_d_bg = np.flip(e_d_bg)
-        d_bg1 = e_d_bg / e_bg
-
-    cmb = CMBOnly()
-    d_bg2 = cmb.density_e(e_bg, z=0)
-    return e_bg, d_bg1 + d_bg2
+from src.local_density import ISRF
 
 
 def inverse_compton_timescale(energy, mass):
-    e, d = get_total_density()
+    # background density
+    cmb = CMBOnly()
+    isrf = ISRF()
+    e_bg = np.logspace(-5, 2, 400) * u.eV  # background photon energy
+    d_cmb = cmb.density_e(e_bg, z=0)
+    d_isrf = isrf.density_e(e_bg)
+    d_bg = d_cmb + d_isrf
+
     lg_e1_min, lg_e1_max = 5, 19
     lg_e1 = np.linspace(lg_e1_min, lg_e1_max, 10000)
     e1 = 10**lg_e1 * u.eV
 
-    e12, e21 = np.meshgrid(e1, e, indexing='ij')
+    e12, e21 = np.meshgrid(e1, e_bg, indexing='ij')
 
     ans = np.ones_like(energy.value) * u.eV / u.s
     for i, e_i in enumerate(energy):
         # print(i)
         g_i = (e_i / (mass * cst.c ** 2)).to('')
-        ans_i = klein_nishina_on_a_given_photon_density_profile(g1=g_i, e1=e1, e2=e, bg_phot_density=d,
+        ans_i = klein_nishina_on_a_given_photon_density_profile(g1=g_i, e1=e1, e2=e_bg, bg_phot_density=d_bg,
                                                                 e12=e12, e21=e21, if_norm=False).to(1 / (u.eV * u.s))
         f = interp1d(lg_e1, e1 * e1 * ans_i, kind='cubic')
         ans[i] = quad(f, lg_e1_min, lg_e1_max)[0] * u.eV / u.s

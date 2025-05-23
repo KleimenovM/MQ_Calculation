@@ -141,6 +141,9 @@ class InverseComptonCooling(Cooling):
 
 
 class JointCooling(Cooling):
+    """
+    Both synchrotron and inverse Compton cooling taken into account
+    """
     def __init__(self, magnetic_field=1e-6 * Gauss):
         super().__init__()
         self.synch = SynchrotronCooling(magnetic_field)
