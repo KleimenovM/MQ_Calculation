@@ -1,13 +1,22 @@
 import os.path
+import pickle
+from pathlib import Path
+
 import numpy as np
 
 from scipy.interpolate import interp1d
 
 from astropy.constants import codata2010 as const
+from astropy.coordinates import SkyCoord, Galactocentric, galactocentric_frame_defaults
 import astropy.units as u
 
-from config.constants import T_CMB
-from config.settings import ISRF_DIR
+galactocentric_frame_defaults.set('v4.0')
+galactocentric = Galactocentric()
+
+t_cmb = 2.72548 * u.K  # [K], CMB temperature, Source: # https://en.wikipedia.org/wiki/Cosmic_microwave_background
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+WEIN_DATA_FOLDER = os.path.join(ROOT_DIR, 'GalacticExtinction')
 
 
 def wvl_to_e(wvl):
@@ -45,7 +54,7 @@ class BBR:
 
 class CosmicBackground:
     def __init__(self, cmb_on: bool = False):
-        self.cmb = BBR(T_CMB)
+        self.cmb = BBR(t_cmb)
         self.cmb_on = cmb_on
 
     def no_cmb_intensity(self, wvl, z):
@@ -117,7 +126,7 @@ class Dust:
         Source: http://www.astro.princeton.edu/~draine/dust/dustmix.html, (R_V = 3.1, 2003)
         :return: wavelength-emissivity interpolator
         """
-        fn = os.path.join(ISRF_DIR, self.Weingarten_paths[int(self.if_new)])
+        fn = os.path.join(WEIN_DATA_FOLDER, self.Weingarten_paths[int(self.if_new)])
         with open(fn) as f:
             d = f.readlines()
 
@@ -151,6 +160,42 @@ class Dust:
         # warm component, lambda * eta_lambda
         wvl_eta_w = self.rho_w(R, Z) * self.k_wvl(wvl) * BBR(self.T_w).intensity(wvl, z)
         return ((wvl_eta_w + wvl_eta_c) / wvl).to(u.W * u.cm ** (-3) * u.sr ** (-1) * u.um ** (-1))
+
+
+class Stars:
+    def __init__(self):
+        # from [Vernetto-2016]
+        starlight_data = np.loadtxt("starlight_density_at_the_Sun.txt", skiprows=1, unpack=True, delimiter=",")
+        wvl = starlight_data[0] * u.um
+        self.e = wvl_to_e(wvl)
+
+        l_ul = starlight_data[1] * u.eV * u.cm**(-3)
+        self.energy_density_e = (l_ul / self.e).to(u.cm**(-3))
+
+        self.R = 2.17 * u.kpc
+        self.Z = 7.22 * u.kpc
+
+        # Sun in GC frame
+        sun = SkyCoord(ra=0.0 * u.deg, dec=0.0 * u.deg, distance=0.0 * u.kpc, frame='icrs').transform_to(galactocentric)
+        sun_cords = sun.cartesian.xyz
+        r_sun, z_sun = np.sqrt(sun_cords[0]**2 + sun_cords[1]**2), np.abs(sun_cords[2])
+
+        # starlight photon density at the GC
+        self.energy_density_GC = self.energy_density_e * np.exp(+r_sun/self.R + z_sun/self.Z)
+        self.interpolator = self.interpolate_energy_density()
+
+    def interpolate_energy_density(self):
+        lg_e = np.log10(self.e / u.eV)
+        lg_u_e = np.log10(self.energy_density_GC / (u.cm ** (-3)))
+        interpolator = interp1d(lg_e[::-1], lg_u_e[::-1], bounds_error=False, fill_value='extrapolate')
+        return interpolator
+
+    def u_e(self, e, r, z):
+        lg_e = np.log10(e / u.eV)
+        return 10**self.interpolator(lg_e) * u.cm**(-3) * np.exp(-r / self.R - np.abs(z) / self.Z)
+
+    def density_e(self, e, r, z):
+        return self.u_e(e, r, z) / e
 
 
 if __name__ == '__main__':
