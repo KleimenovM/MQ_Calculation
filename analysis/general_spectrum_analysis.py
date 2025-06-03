@@ -4,12 +4,21 @@ import astropy.units as u
 from config.units import flux_unit
 
 
-def volume_approximation(energy):
-    # volume (define by Kolmogorov diffusion)
-    width_length_ratio = 0.2
-    size_1TeV = 100 * u.pc
-    size = size_1TeV * (energy / u.TeV) ** (1 / 6)
-    return size ** 3 * width_length_ratio ** 2
+def length_approximation(energy,
+                         size_1TeV=110*u.pc):
+    return (size_1TeV * (energy / u.TeV) ** (1 / 6)).to(u.pc)
+
+
+def width_approximation(energy,
+                        size_1TeV=110*u.pc,
+                        width_length_ratio=0.2):
+    return width_length_ratio * length_approximation(energy,size_1TeV)
+
+
+def volume_approximation(energy,
+                         width_length_ratio=0.2,
+                         size_1TeV=110 * u.pc):
+    return length_approximation(energy, size_1TeV) * width_approximation(energy, size_1TeV, width_length_ratio)**2
 
 
 def prepare_measurements(e, f_cor, f_l_cor, f_p_cor):
