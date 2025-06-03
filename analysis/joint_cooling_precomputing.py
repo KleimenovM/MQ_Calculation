@@ -7,7 +7,7 @@ from scipy.interpolate import RegularGridInterpolator
 
 import astropy.units as u
 
-from analysis.electron_spectrum_analysis import energy_backpropagation, get_the_modulation_coefficient
+from electron_spectrum_analysis import energy_backpropagation, get_the_modulation_coefficient
 from config.settings import ELECTRONS_DIR
 from config.units import Gauss
 from src.electron_cooling import JointCooling
@@ -36,12 +36,12 @@ def joint_cooling_precomputing(bvalue):
 
 
 def save_cooling_precomputed(bvalue, times, energies, modulation_coefficient):
-    pickle.dump([times, energies, modulation_coefficient],
-                open(os.path.join(ELECTRONS_DIR, f"joint_cooling_{bvalue.value * 1e6:.1f}.pck"),"wb"))
+    with open(os.path.join(ELECTRONS_DIR, f"joint_cooling_{bvalue.value * 1e6:.1f}.pck"),"wb") as write_file:
+        pickle.dump([times, energies, modulation_coefficient], write_file)
     return
 
 
 if __name__ == '__main__':
-    bf = .5e-6 * Gauss
-    t, e, mc = joint_cooling_precomputing(bf)
-    save_cooling_precomputed(bf, t, e, mc)
+    for bf in np.array([5]) * 1e-6 * Gauss:
+        t, e, mc = joint_cooling_precomputing(bf)
+        save_cooling_precomputed(bf, t, e, mc)
