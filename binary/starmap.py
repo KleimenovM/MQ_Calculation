@@ -198,7 +198,7 @@ def main():
     ax.set_ylim(-16, 4)
 
     plt.tight_layout()
-    save_figure("star_map")
+    # save_figure("star_map")
     plt.show()
     return
 
