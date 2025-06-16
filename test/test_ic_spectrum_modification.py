@@ -30,7 +30,7 @@ def test_ic_spectrum_modification():
     plt.legend(loc=2, ncol=2)
 
     plt.xscale('log')
-    plt.xlim(1e9, 1e15)
+    plt.xlim(5e8, 2e15)
     plt.xlabel("Energy, eV")
 
     plt.yscale('log')

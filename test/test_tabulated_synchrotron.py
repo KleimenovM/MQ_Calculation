@@ -6,13 +6,12 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 
-from analysis.general_spectrum_analysis import volume_approximation
+from analysis_electrons.general_spectrum_analysis import volume_approximation
 from config.plotting import set_plotting_defaults
 from config.settings import ELECTRONS_DIR
 from config.units import Gauss
 from src.electron_spectrum_parametrization import SpectrumParametrization
 from src.synchrotron_emission import electron_synchrotron_emission_luminosity
-from tabulate_synch_emission import show_synch_table
 
 
 def get_the_table(bfield):

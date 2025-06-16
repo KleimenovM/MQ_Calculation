@@ -9,6 +9,11 @@ from src.black_body_radiation import bbr_density
 
 
 def thomson_regime_profile_function(x1):
+    """
+    Thomson regime profile [Blumenthal et al., 1970]
+    :param x1:
+    :return:
+    """
     result = 2 * x1 * np.log(x1) + x1 + 1 - 2 * x1 ** 2
     return result * np.heaviside(1 - x1, 0.5)
 

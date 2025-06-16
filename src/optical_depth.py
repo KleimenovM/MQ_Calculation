@@ -11,7 +11,7 @@ from astropy.constants import codata2010 as const
 import astropy.units as u
 
 from cross_section import gamma_gamma_cross_section, total_cross_section
-from ebl_photon_density import CosmicBackground
+from background_photon_density import CosmicBackground
 
 H0: float = 7.0e4  # [m/s Mpc-1], Hubble constant
 OMEGA_DE: float = 0.7  # [DL], dark energy density

@@ -4,6 +4,7 @@ from fractions import Fraction
 
 Franklin = u.g ** Fraction(1, 2) * u.cm ** Fraction(3, 2) * u.s ** (-1)
 Gauss = u.g ** Fraction(1, 2) * u.cm ** (-Fraction(1, 2)) * u.s ** (-1)
+uGauss = 1e-6 * Gauss
 
 flux_unit = u.erg / (u.cm ** 2 * u.s)
 rad_density_unit = u.erg / (u.cm ** 3 * u.s)

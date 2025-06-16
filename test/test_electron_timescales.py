@@ -11,8 +11,8 @@ from astropy.constants import codata2018 as cst
 from config.plotting import set_plotting_defaults, Linestyles, royalblue_palette, orangered_palette, save_figure
 from config.settings import SHAPE_DIR
 from config.units import Gauss
-from src.electron_timescales import diffusion_timescale, synchrotron_timescale, inverse_compton_timescale
-
+from src.electron_timescales import diffusion_timescale, synchrotron_timescale, inverse_compton_timescale, \
+    electron_inverse_compton_timescale
 
 set_plotting_defaults()
 
@@ -27,17 +27,18 @@ def test_electron_timescales():
     # t_max1 = diffusion_timescale(E_max, dist - err).value
     # t_max2 = diffusion_timescale(E_max, dist + err).value
 
-    energies = np.logspace(11, 17, 200) * u.eV  # electron energies
+    energies = np.logspace(9, 17, 200) * u.eV  # electron energies
     Bfield = 2**np.linspace(0, 2, 3) * 1e-6 * Gauss  # magnetic field values
     Dist = 50 * 2**np.linspace(0, 3, 4) * u.pc  # possible distances
 
     fig = plt.figure(figsize=(10, 8))
     ax = plt.gca()
 
-    left, right = 1e11, 1e17
-    bottom, top = 1e2, 1e6
+    left, right = 1e9, 1e17
+    bottom, top = 1e2, 1e9
 
     # photon timescale
+    print("started photon timescales")
     ax.plot(1e15, 1e4, label='Photon time', linestyle='None')
     for i, D in enumerate(Dist[::-1]):
         photon_time = (D / cst.c).to(u.year) * np.ones_like(energies.value)
@@ -51,6 +52,7 @@ def test_electron_timescales():
     #     plt.fill_between(E, (t_min1[i], t_max1[i]), (t_min2[i], t_max2[i]), alpha=.3)
 
     # diffusion timescale lines
+    print("started diffusion timescales")
     ax.plot(1e15, 1e4, label='Diffusion time', linestyle='None')
     for i, D in enumerate(Dist[::]):
         for j, b in enumerate(Bfield[::]):
@@ -65,6 +67,7 @@ def test_electron_timescales():
                            color=orangered_palette[i], alpha=0.7, linestyle=Linestyles[j % len(Linestyles)], linewidth=2)
 
     # synchrotron timescale
+    print("started synchrotron timescales")
     ax.plot(1e15, 1e4, label='Synchrotron time', linestyle='None')
     for i, B in enumerate(Bfield[::]):
         synch_time = synchrotron_timescale(energies, B, cst.m_e).to(u.year)
@@ -75,7 +78,9 @@ def test_electron_timescales():
                  f"{B.value * 1e6:.2g} "r"$\mu G$", rotation=-40, color=royalblue_palette[i], ma='left')
 
     # inverse compton timescale
-    ic_time = inverse_compton_timescale(energies, cst.m_e)
+    print("started ic timescales")
+    # ic_time = inverse_compton_timescale(energies, cst.m_e)
+    ic_time = electron_inverse_compton_timescale(energies)
     ax.plot(1e15, 1e4, label='Inverse Compton', linestyle='None')
     ax.plot(energies, ic_time, label='time', color='seagreen', linestyle='solid', linewidth=2)
     ax.plot(1e15, 1e4, label='', linestyle='None')
@@ -103,7 +108,7 @@ def test_electron_timescales():
     fig.subplots_adjust(right=0.8)
     plt.tight_layout()
 
-    save_figure("electron_timescales")
+    # save_figure("electron_timescales")
     plt.show()
     return
 

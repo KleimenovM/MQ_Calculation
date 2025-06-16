@@ -6,7 +6,7 @@ import astropy.units as u
 from matplotlib import pyplot as plt
 from scipy.interpolate import RegularGridInterpolator
 
-from config.settings import ELECTRONS_DIR
+from config.settings import ELECTRONS_DIR, SYNCH_INTERP_DIR, SYNCH_TABLES_DIR
 from src.synchrotron_emission import single_electron_synchrotron_emission_power
 from config.units import Gauss
 
@@ -28,7 +28,7 @@ def save_synch_table(electron_energy, photon_energy, bfield, table):
     lg_electron_energy = np.log10(electron_energy.value)
     lg_photon_energy = np.log10(photon_energy.value)
 
-    path = os.path.join(ELECTRONS_DIR, f"synch_power_{bfield.value * 1e6:.1f}.pck")
+    path = os.path.join(SYNCH_TABLES_DIR, f"synch_power_{bfield.value * 1e6:.1f}.pck")
     pickle.dump([lg_electron_energy, lg_photon_energy, lg_table], open(path, "wb"))
     return
 
@@ -44,22 +44,22 @@ def tabulate_synch_emission(electron_energy, photon_energy, bfield):
 
 
 def interpolate_tabulated_synchrotron(bfield):
-    path_in = os.path.join(ELECTRONS_DIR, f"synch_power_{bfield.value * 1e6:.1f}.pck")
+    path_in = os.path.join(SYNCH_TABLES_DIR, f"synch_power_{bfield.value * 1e6:.1f}.pck")
     data = pickle.load(open(path_in, "rb"))
 
     lg_ee, lg_pe, lg_table = data[0], data[1], data[2]
     lg_interpolator = RegularGridInterpolator((lg_ee, lg_pe), lg_table)
 
-    path_out = os.path.join(ELECTRONS_DIR, f"synch_power_interp_{bfield.value * 1e6:.1f}.pck")
+    path_out = os.path.join(SYNCH_INTERP_DIR, f"synch_power_interp_{bfield.value * 1e6:.1f}.pck")
     pickle.dump([lg_ee, lg_pe, lg_interpolator], open(path_out, "wb"))
 
     return
 
 
 if __name__ == '__main__':
-    bf = 8e-6 * Gauss
-    # ee = np.logspace(6, 19, 1000) * u.eV
-    # phe = np.logspace(-8, 15, 2000) * u.eV
-    # tabulate_synch_emission(ee, phe, bf)
+    bf = 100e-6 * Gauss
+    ee = np.logspace(6, 19, 1000) * u.eV
+    phe = np.logspace(-8, 15, 2000) * u.eV
+    tabulate_synch_emission(ee, phe, bf)
     interpolate_tabulated_synchrotron(bf)
 
