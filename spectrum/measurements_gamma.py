@@ -26,7 +26,7 @@ def HAWC():
 
 def LHAASO():
     f_u = u.erg / (u.cm ** 2 * u.s)
-    e, flux, f_l1, f_p1 = np.loadtxt(os.path.join(SPECTRUM_DIR, "LHAASO.txt"), skiprows=1, unpack=True)
+    e, flux, f_l1, f_p1 = np.loadtxt(os.path.join(SPECTRUM_DIR, "LHAASO.txt"), skiprows=2, unpack=True)
     f_l, f_p = flux - f_l1, f_p1 - flux
 
     e = (e * u.TeV).to(u.eV)
@@ -106,7 +106,8 @@ def gamma_ray_measurements():
     for i in range(len(names)):
         e, flux, f_l, f_p, e_l, e_p = functions[i]()
         plt.errorbar(e, flux, xerr=[e_l, e_p], yerr=[f_l, f_p], linestyle='None', label=names[i], fmt='.',
-                     uplims=f_p <= 0)
+                     uplims=f_p <= 0, capsize=0)
+        print(f_p <= 0)
     return
 
 
@@ -116,15 +117,13 @@ def plot_gamma_ray_measurements():
     plt.xlabel("Energy [eV]")
     plt.xscale('log')
 
-    plt.plot([1e10, 1e16], [3e-13, 3e-13])
-
     plt.ylabel("Flux [erg cm$^{-2}$ s$^{-1}$]")
     plt.yscale('log')
     plt.ylim(1e-13, 1e-10)
 
     plt.legend(loc=2)
     plt.tight_layout()
-    save_figure("gamma_ray_measurements")
+    # save_figure("gamma_ray_measurements")
     plt.show()
     return
 

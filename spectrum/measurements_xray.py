@@ -41,22 +41,27 @@ def nu_star_2021():
 
 
 def constraint_XRISM():
-    flux_per_area_unit = flux_unit / u.arcmin**2
-    x = np.array([2e3, 1e4]) * u.eV  # 2-10 keV band
-    x_mid = np.array([np.sqrt(x[0] * x[1]).value]) * u.eV
-    x_err_l, x_err_p = x_mid - x[0], x[1] - x_mid
-    y_per_arcmin = 9.2e-15 * flux_per_area_unit
-    y_err = 1.1e-15 * flux_per_area_unit
+    x = np.array([2000, 10000])
+    y = np.array([[5.226151097035918e-12, 5.281136737606013e-12],
+                  [1.933586584317008e-12, 1.933586584317008e-12]])
 
-    # article area value 629.4 arcmin2
-    emission_area_min = 1 * u.deg * 0.2 * u.deg
-    emission_area_max = 4 * emission_area_min
-    emission_area = np.sqrt(emission_area_min * emission_area_max)
+    energy = np.array([np.sqrt(x[0] * x[1])]) * u.eV
+    flux = np.array([np.prod(y, axis=(0, 1)) ** (1 / 4)]) * flux_unit
+    f_l, f_p = flux - np.sqrt(np.prod(y[1])) * flux_unit, np.sqrt(np.prod(y[0])) * flux_unit - flux
+    e_l, e_p = energy - x[0] * u.eV, x[1] * u.eV - energy
+    return energy, flux, f_l, f_p, e_l, e_p
 
-    y_real = np.array([(y_per_arcmin * emission_area).to(flux_unit).value]) * flux_unit
-    y_err_min = y_real - ((y_per_arcmin - y_err) * emission_area_min).to(flux_unit)
-    y_err_max = ((y_per_arcmin + y_err) * emission_area_max).to(flux_unit) - y_real
-    return x_mid, y_real, y_err_min, y_err_max, x_err_l, x_err_p
+
+def weak_constraint_XRISM():
+    x = np.array([2000, 10000])
+    y = np.array([2.8, 4.4]) * 1e-15 * 629.4
+
+    energy = np.array([np.sqrt(x[0] * x[1])]) * u.eV
+    flux = np.array([np.sqrt(y[0] * y[1])]) * flux_unit
+
+    f_l, f_p = flux - y[0] * flux_unit, y[1] * flux_unit - flux
+    e_l, e_p = energy - x[0] * u.eV, x[1] * u.eV - energy
+    return energy, flux, f_l, f_p, e_l, e_p
 
 
 def constraint_Chandra():

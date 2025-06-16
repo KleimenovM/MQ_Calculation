@@ -10,7 +10,7 @@ from config.settings import ISRF_DIR, SPECTRUM_DIR
 from config.units import flux_unit
 from spectrum.measurements_gamma import gamma_ray_data
 from src.cross_section import total_cross_section
-from src.ebl_photon_density import CMBOnly
+from src.background_photon_density import CMBOnly
 
 
 def fix_lower(x, data, brd=1e-10):
