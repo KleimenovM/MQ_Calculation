@@ -3,7 +3,7 @@ from astropy.constants import codata2010 as const
 import astropy.units as u
 from scipy.integrate import trapezoid
 
-from config.constants import T_CMB
+from config.constants import T_CMB, CST_m_e
 from src.black_body_radiation import bbr_density
 
 
@@ -14,7 +14,7 @@ def klein_nishina_profile_function_x(x1, g_e1):
 
 def klein_nishina_profile_function(q1, g_e1):
     """
-    Klein-Nishina profile (see [Blumenthal et al. (1970)]
+    Klein-Nishina profile (see [Blumenthal et al. (1970)], 2.48)
     :param q1: [DL]
     :param g_e1: []
     :return:
@@ -46,21 +46,21 @@ def klein_nishina_on_a_given_photon_density_profile(g1, e1, e2, bg_phot_density,
         e12, e21 = np.meshgrid(e1, e2, indexing='ij')
 
     if mass is None:
-        mass = (const.m_e * const.c ** 2).to(u.eV)
+        mass = CST_m_e
 
     g_e21 = 4 * e21 * g1 / mass
     E12 = e12 / (g1 * mass)
-    x_12 = E12 * (1 + g_e21) / g_e21
+    x_12 = E12 * (1 + g_e21) / g_e21  # x = E1/E1(max)
 
     F1 = klein_nishina_profile_function_x(x_12, g_e21)
 
-    result = 4 * const.sigma_T * const.c / (3 * g1 ** 2) * trapezoid(bg_phot_density * F1, np.log(e21 / u.eV), axis=1)
+    result = 3 * const.sigma_T * const.c / (4 * g1**2) * trapezoid(bg_phot_density * F1, np.log(e21 / u.eV), axis=1)
 
     if if_norm:
         norm = trapezoid(result, e1, axis=0)
         return result / norm
 
-    return result
+    return result.to(1/(u.eV * u.s))
 
 
 def klein_nishina_on_CMB(g1, e1, e2=None, if_norm: bool = False):
@@ -79,3 +79,7 @@ def klein_nishina_on_CMB(g1, e1, e2=None, if_norm: bool = False):
     n_CMB = bbr_density(e21, T_CMB)
 
     return klein_nishina_on_a_given_photon_density_profile(g1, e1, e2, n_CMB, if_norm=if_norm)
+
+
+if __name__ == '__main__':
+    print("Not for direct use.")
