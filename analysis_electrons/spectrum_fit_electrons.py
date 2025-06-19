@@ -1,22 +1,24 @@
 import os
 import pickle
+from os import cpu_count
 
 import emcee
 import numpy as np
 
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 
 import astropy.units as u
 from astropy.constants import codata2010 as cst
 from scipy.integrate import trapezoid
-from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import interp1d
 
-from analysis_electrons.general_spectrum_analysis import prepare_measurements
-from config.settings import SPECTRUM_DIR, ELECTRONS_DIR, MCMC_ELECTRONS_SYNCH_ONLY, MCMC_ELECTRONS_JOINT, \
+from analysis_general.general_spectrum_analysis import prepare_measurements
+from analysis_general.compton_radiation_calculator import ComptonRadiationCalculator
+from config.settings import SPECTRUM_DIR, MCMC_ELECTRONS_SYNCH_ONLY, MCMC_ELECTRONS_JOINT, \
     JOINT_COOLING_DIR, MCMC_ELECTRONS_STEADY_JOINT, MCMC_ELECTRONS_SYNCH_STEADY, INVERSE_COMPTON_DIR
 from config.units import Franklin, Gauss, flux_unit
 
-from src.electron_spectrum_parametrization import SpectrumParametrization
+from analysis_general.spectrum_parametrization import SpectrumParametrization
 from src.electron_timescales import synchrotron_timescale
 from src.likelihood_elements import log_uniform, log_likelihood_measurements
 
@@ -47,33 +49,10 @@ class CooledSpectrumFit:
         self.upper_indices = self.flux_p.value <= 0
 
         # distance and radiation area
-        dist = 6.1 * u.kpc  # [kpc]
-        self.area = 4 * np.pi * dist ** 2  # [kpc2]
+        self.dist = 6.1 * u.kpc  # [kpc]
 
         self.electron_energy = .0 * u.eV
-        self.radiation_matrix = .0 * 1 / (u.eV * u.s)
-
-    def set_radiation_matrix(self, electron_energy=None, take_each: int = 1,
-                             photon_energy=None):
-        # electron radiation properties
-        data = pickle.load(open(os.path.join(INVERSE_COMPTON_DIR, "IC_Total.pck"), "rb"))
-        if photon_energy is None:
-            lg_photon_energy = np.log10(self.photon_energy.to(u.eV).value)
-        else:
-            lg_photon_energy = np.log10(photon_energy.to(u.eV).value)
-
-        interpolator = data[2]
-
-        if electron_energy is None:
-            lg_electron_energy = data[0][::take_each]
-            electron_energy = 10 ** lg_electron_energy * u.eV
-        else:
-            lg_electron_energy = np.log10(electron_energy.value)
-
-        lg_xy, lg_yx = np.meshgrid(lg_electron_energy, lg_photon_energy, indexing='ij')
-        radiation_matrix = 10 ** interpolator((lg_xy, lg_yx)) * (1 / (u.eV * u.s))
-
-        return electron_energy, radiation_matrix
+        self.compton_calculator = ComptonRadiationCalculator(photon_energy=self.photon_energy)
 
     def log_prior(self, theta):
         """
@@ -92,12 +71,7 @@ class CooledSpectrumFit:
     def model(self, parameters):
         # electron density after cooling
         dN_dE_cooled = self.cooled_spectrum(parameters)
-
-        # number of photons homogenously radiated from the nebula (dN/dE.dt)
-        photon_spectrum = trapezoid(self.radiation_matrix.T * dN_dE_cooled, self.electron_energy)
-
-        # photon flux from the whole source
-        flux = self.photon_energy ** 2 * photon_spectrum / self.area
+        flux = self.compton_calculator.photon_flux(dN_dE_cooled, self.dist)
         return flux.to(flux_unit)
 
     def log_probability(self, theta):
@@ -130,8 +104,6 @@ class SynchrotronCooledSpectrumFit(CooledSpectrumFit):
         self.sharp_1Gauss = ((2 * e ** 4 / (3 * cst.m_e ** 4 * cst.c ** 7) * (1e-6 * Gauss) ** 2 * sin2_avg).to(
             u.eV ** (-1) * u.yr ** (-1)) * u.yr)
 
-        self.electron_energy, self.radiation_matrix = self.set_radiation_matrix()
-
     def cooled_spectrum(self, parameters):
         eta, gamma, k1, b2t = parameters[0], parameters[1], parameters[2], 10 ** parameters[3]
 
@@ -159,7 +131,8 @@ class SynchrotronSteadyStateFit(CooledSpectrumFit):
         self.start = self.mean + self.width * (np.random.random([self.nwalkers, self.ndim]) - 0.5)  # [DL]
 
         # IC radiation properties
-        self.electron_energy, self.radiation_matrix = self.set_radiation_matrix(take_each=5)
+        self.compton_calculator.set_radiation_matrix(electron_energy=self.compton_calculator.electron_energy[::5],
+                                                     photon_energy=self.photon_energy)
 
         # synchrotron radiation parameters
         sin2_avg = 2 / 3
@@ -219,11 +192,12 @@ class JointCooledSpectrumFit(CooledSpectrumFit):
         self.bfield = bvalue * Gauss
         self.times = times
         self.energies = energies * u.eV
-        electron_energy = self.energies[:, 0]
-        self.synch_timescale = synchrotron_timescale(electron_energy, self.bfield)
-        lg_electron_energy = np.log10(electron_energy.value)  # initial energy
+        self.electron_energy = self.energies[:, 0]
+        self.synch_timescale = synchrotron_timescale(self.electron_energy, self.bfield)
 
-        self.electron_energy, self.radiation_matrix = self.set_radiation_matrix(electron_energy=electron_energy)
+        # reset compton calculator
+        self.compton_calculator.set_radiation_matrix(electron_energy=self.electron_energy,
+                                                     photon_energy=self.photon_energy)
 
     def cooled_spectrum(self, parameters):
         # extract the parameters
@@ -247,8 +221,8 @@ class JointSteadyStateFit(CooledSpectrumFit):
         self.bfield = bvalue * Gauss
 
         # source parameters   eta gamma  k2 t_index
-        self.mean = np.array([0.0, 2.5, 4.0, 5000])  # [DL]
-        self.width = np.array([5.0, 3.0, 4.0, 4999])  # [DL]
+        self.mean = np.array([0.0, 2.5, 4.0, 7000])  # [DL]
+        self.width = np.array([5.0, 3.0, 4.0, 2999])  # [DL]
         self.ndim = self.mean.size
         self.start = self.mean + self.width * (np.random.random([self.nwalkers, self.ndim]) - 0.5)  # [DL]
 
@@ -256,13 +230,18 @@ class JointSteadyStateFit(CooledSpectrumFit):
         times, energies, modulation_coefficient = (
             pickle.load(open(os.path.join(JOINT_COOLING_DIR, f"joint_cooling_{bvalue * 1e6:.1f}.pck"), "rb")))
         self.times = times
-        self.energies = energies[::2] * u.eV
-        electron_energy = self.energies[:, 0]
-        self.modulation_coefficient = modulation_coefficient[::2]
-        self.synch_timescale = synchrotron_timescale(electron_energy, self.bfield)
+        self.energies = energies[::4, :] * u.eV
+        self.electron_energy = self.energies[:, 0]
+        self.modulation_coefficient = modulation_coefficient[::4, :]
+        self.synch_timescale = synchrotron_timescale(self.electron_energy, self.bfield)
 
         # IC radiation properties
-        self.electron_energy, self.radiation_matrix = self.set_radiation_matrix(electron_energy=electron_energy)
+        self.compton_calculator.set_radiation_matrix(electron_energy=self.electron_energy,
+                                                     photon_energy=self.photon_energy)
+
+    def get_index(self, time):
+        indices = np.arange(0, self.times.size, 1)
+        return int(interp1d(self.times, indices)(time))
 
     def cooled_spectrum(self, parameters):
         # extract the parameters
@@ -293,7 +272,7 @@ def electron_synchrotron_only(nsteps=2000, nwalkers=32):
     return
 
 
-def electron_joint_single_cooling(nsteps=2000, nwalkers=32, bvalue=1e-6):
+def electron_joint_single_cooling(bvalue, nsteps=2000, nwalkers=32):
     joint = JointCooledSpectrumFit(nsteps=nsteps, nwalkers=nwalkers, bvalue=bvalue)
     joint.k20 = 5.0
     joint.k10 = -3.0
@@ -304,7 +283,7 @@ def electron_joint_single_cooling(nsteps=2000, nwalkers=32, bvalue=1e-6):
     return
 
 
-def electron_joint_steady_cooling(nsteps=2000, nwalkers=32, bvalue: float = 1e-6):
+def electron_joint_steady_cooling(bvalue, nsteps=400, nwalkers=32):
     joint = JointSteadyStateFit(nsteps=nsteps, nwalkers=nwalkers, bvalue=bvalue)
     joint.k20 = 4.0
     joint.k10 = -10.0
@@ -315,20 +294,24 @@ def electron_joint_steady_cooling(nsteps=2000, nwalkers=32, bvalue: float = 1e-6
     return
 
 
-def electron_synch_steady_cooling(nsteps=2000, nwalkers=32):
+def electron_synch_steady_cooling(nsteps=400, nwalkers=32):
     synch = SynchrotronSteadyStateFit(nsteps=nsteps, nwalkers=nwalkers)
     print("Synch-Steady solver set")
     result = synch.run()
     with open(os.path.join(MCMC_ELECTRONS_SYNCH_STEADY,
-                           f"joint_{nsteps}n_{nwalkers}w.pck"), "wb") as file_open:
+                           f"joint_{nsteps}n_{nwalkers}w_avg7000.pck"), "wb") as file_open:
         pickle.dump([result, synch], file_open)
     return
 
 
 if __name__ == '__main__':
-    n = 600
+    n = 1000
     nw = 32
     # electron_synchrotron_only(nsteps=n, nwalkers=nw)
-    # electron_joint_single_cooling(nsteps=n, nwalkers=nw, bvalue=6e-6)
+    # electron_joint_single_cooling(nsteps=n, nwalkers=nw, bvalue=bvalue)
+    bvalues = np.array([0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) * 1e-6
+    with Pool(cpu_count()-1) as pool:
+        pool.map(electron_joint_single_cooling, bvalues)
+    """for bv in bvalues:
+        electron_joint_single_cooling(nwalkers=nw, nsteps=n, bvalue=bv)"""
     # electron_synch_steady_cooling(nsteps=n, nwalkers=nw)
-    electron_joint_steady_cooling(nsteps=n, nwalkers=nw, bvalue=5e-6)
