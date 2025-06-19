@@ -1,4 +1,5 @@
 import numpy as np
+import astropy.units as u
 
 
 class SpectrumParametrization:
@@ -52,7 +53,7 @@ class SpectrumParametrization:
         """
         e = self.e0 * 10**np.linspace(k1, k2, 1000)
         dn_de = self.dn_de(e, eta, p, k1, k2)
-        return np.trapezoid(dn_de, e)
+        return np.trapezoid(e * dn_de, np.log(e/u.eV))
 
     def tot_n0(self):
         """
@@ -70,9 +71,9 @@ class SpectrumParametrization:
         :param k2:
         :return:
         """
-        e = self.e0 * 10 ** np.linspace(k1, k2, 1000)
+        e = self.e0 * 10**np.linspace(k1, k2, 1000)
         dn_de = self.dn_de(e, eta, p, k1, k2)
-        return np.trapezoid(e * dn_de, e)
+        return np.trapezoid(e**2 * dn_de, np.log(e/u.eV))
 
     def tot_e0(self):
         """
