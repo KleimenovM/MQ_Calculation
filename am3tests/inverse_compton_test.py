@@ -8,6 +8,7 @@ import astropy.units as u
 import matplotlib.colors
 
 from analysis_electrons.spectrum_fit_electrons import JointSteadyStateFit
+from analysis_general.synchrotron_radiation_calculator import SynchrotronRadiationCalculator
 
 from config.plotting import set_plotting_defaults
 from config.settings import SYNCH_INTERP_DIR
@@ -274,44 +275,18 @@ def compare_to_analytical(lifetime, bfield):
     plt.subplot(1, 2, 1)
     plt.loglog(joint.photon_energy, joint.model(params), color='black')
 
-    # SYNCHROTRON RADIATION averaged
-    path = os.path.join(SYNCH_INTERP_DIR, f"synch_power_avg_interp_{bfield.value * 1e6:.1f}.pck")
-    synch_interp_data = pickle.load(open(path, "rb"))
-    synch_photon_energy = np.logspace(-8, 15, 200) * u.eV
-    synch_interp = synch_interp_data[2]
-
+    # SYNCHROTRON RADIATION
     jee = joint.electron_energy
-
-    lg_ee = np.log10(jee.value)
-    lg_pe = np.log10(synch_photon_energy.value)
-    ee_pe, pe_ee = np.meshgrid(lg_ee, lg_pe, indexing='ij')
-    synch_table = 10 ** synch_interp((ee_pe, pe_ee)) * (1 / u.s)
-
     dN_dE = joint.cooled_spectrum(params)
     dN_dE_inj = joint.spectrum.dn_de(jee, params[0], params[1], joint.k10, params[2])
-    synch_lum_full = np.trapezoid(synch_table.T * dN_dE, jee, axis=1)
-    synch_flux_full = (synch_lum_full * synch_photon_energy / joint.area).to(flux_unit)
 
-    synch_flux_init = (np.trapezoid(synch_table.T * dN_dE_inj, joint.electron_energy,
-                                    axis=1) * synch_photon_energy / joint.area).to(flux_unit)
-    plt.loglog(synch_photon_energy, synch_flux_init, color='orange', linestyle='dashdot')
+    synchrotron_calculator = SynchrotronRadiationCalculator(bfield=bfield, electron_energy=jee)
+    synch_photon_energy = synchrotron_calculator.photon_energy
 
-    plt.loglog(synch_photon_energy, synch_flux_full, color='black', linestyle='--')
-
-    # SYNCHROTRON RADIATION averaged
-    path = os.path.join(SYNCH_INTERP_DIR, f"synch_power_interp_{bfield.value * 1e6:.1f}.pck")
-    synch_interp_data = pickle.load(open(path, "rb"))
-    synch_photon_energy = np.logspace(-8, 15, 200) * u.eV
-    synch_interp = synch_interp_data[2]
-
-    lg_ee = np.log10(joint.electron_energy.value)
-    lg_pe = np.log10(synch_photon_energy.value)
-    ee_pe, pe_ee = np.meshgrid(lg_ee, lg_pe, indexing='ij')
-    synch_table = 10 ** synch_interp((ee_pe, pe_ee)) * (1 / u.s)
-
-    synch_lum_full = np.trapezoid(synch_table.T * dN_dE, joint.electron_energy, axis=1)
-    synch_flux_full = (synch_lum_full * synch_photon_energy / joint.area).to(flux_unit)
-    plt.loglog(synch_photon_energy, synch_flux_full, color='black', linestyle='dashdot')
+    synch_real = synchrotron_calculator.photon_flux(dN_dE, joint.dist)
+    plt.loglog(synch_photon_energy, synch_real, color='red')
+    synch_init = synchrotron_calculator.photon_flux(dN_dE_inj, joint.dist)
+    plt.loglog(synch_init, synch_real, color='green')
 
     # ELECTRON SPECTRA
     plt.subplot(1, 2, 2)
