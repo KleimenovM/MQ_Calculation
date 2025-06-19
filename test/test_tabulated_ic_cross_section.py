@@ -106,7 +106,7 @@ def test_interpolated_spectrum(filename, color='black', linestyle='dashed', labe
     lg_phot_e = np.log10(photon_energy.value)
     spl = splrep(x=lg_phot_e, y=np.log10(resulting_flux.value), s=10)
     flux = splev(lg_phot_e, spl)
-    plt.loglog(photon_energy, 10 ** flux, color=color, linestyle=linestyle, label=label)
+    plt.loglog(photon_energy, 10**flux, color=color, linestyle=linestyle, label=label)
 
     if if_show:
         for i, name in enumerate(names):
@@ -118,13 +118,13 @@ def test_interpolated_spectrum(filename, color='black', linestyle='dashed', labe
         plt.xlim(1e8, 1e16)
         plt.xlabel("Energy, eV")
 
-        plt.ylim(1e-13, 1e-10)
+        plt.ylim(1e-15, 1e-10)
         plt.ylabel(r"Flux, $\mathrm{erg~cm^{-2}~s^{-1}}$")
 
         plt.legend(loc=2, ncol=3)
 
         plt.tight_layout()
-        save_figure("background_contribution")
+        # save_figure("background_contribution")
         plt.show()
     return
 
