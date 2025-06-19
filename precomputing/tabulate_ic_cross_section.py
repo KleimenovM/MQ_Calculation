@@ -6,6 +6,7 @@ from astropy import units as u
 from astropy.constants import codata2010 as cst
 from scipy.interpolate import RegularGridInterpolator
 
+from config.constants import CST_m_e
 from config.settings import INVERSE_COMPTON_DIR
 from src.background_photon_density import CMBOnly, DustLines, Starlight
 from src.klein_nishina import klein_nishina_on_a_given_photon_density_profile
@@ -56,9 +57,8 @@ def tabulate_the_spectrum(bg_density, bg_energy, filename,
     """
 
     # electrons
-    electron_energy = np.logspace(9, 19, N_e) * u.eV
-    electron_mass = (cst.m_e * cst.c ** 2).to(u.eV)
-    electron_gamma = electron_energy / electron_mass
+    electron_energy = np.logspace(7, 19, N_e) * u.eV
+    electron_gamma = (electron_energy / CST_m_e).to('')
 
     # gamma-ray photons
     photon_energy = np.logspace(7, 18, N_phot) * u.eV
@@ -118,7 +118,7 @@ def tabulate_ic_cross_section():
 
     # background photons
     N_bg = 2000
-    background_energy = np.logspace(-5, 1, N_bg) * u.eV
+    background_energy = np.logspace(-6, 2, N_bg) * u.eV
     d_CMB, d_dust, d_starlight = get_background_density(background_energy)
     d_total = d_CMB + d_dust + d_starlight
 
@@ -140,9 +140,10 @@ def interpolate_IC_cross_section():
     filenames_out = ["IC_CMB.pck", "IC_Dust.pck", "IC_Starlight.pck", "IC_Total.pck"]
     for i in range(len(filenames_in)):
         print(f"Interpolating the {filenames_in[i]}")
-        interpolate_tabulated_matrix(filename=filenames[i])
+        interpolate_tabulated_matrix(filename_in=filenames_in[i], filename_out=filenames_out[i])
     return
 
 
 if __name__ == '__main__':
     tabulate_ic_cross_section()
+    interpolate_IC_cross_section()
